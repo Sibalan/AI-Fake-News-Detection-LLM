@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#0f172a" />
+<title>Admin Panel — AI Fake News Detector</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',system-ui,sans-serif;background:#020617;color:#e2e8f0;overflow:hidden;height:100vh}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(99,102,241,0.25);border-radius:10px}
+::-webkit-scrollbar-thumb:hover{background:rgba(99,102,241,0.5)}
+@keyframes float{0%,100%{transform:translateY(0)translateX(0)}25%{transform:translateY(-25px)translateX(12px)}50%{transform:translateY(-12px)translateX(-8px)}75%{transform:translateY(-30px)translateX(6px)}}
+@keyframes pulse-glow{0%,100%{box-shadow:0 0 20px rgba(99,102,241,0.08)}50%{box-shadow:0 0 40px rgba(99,102,241,0.2)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideIn{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:translateX(0)}}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.glass{background:rgba(15,23,42,0.6);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(51,65,85,0.3)}
+.glass-card{background:rgba(30,41,59,0.4);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(51,65,85,0.2);transition:all 0.3s}
+.glass-card:hover{border-color:rgba(99,102,241,0.2)}
+.gradient-text{background:linear-gradient(135deg,#818cf8,#a78bfa,#e879f9);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.sidebar-link{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;color:#64748b;text-decoration:none;transition:all 0.25s;cursor:pointer;position:relative;font-size:0.85rem;font-weight:500}
+.sidebar-link::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:0;background:linear-gradient(180deg,#6366f1,#a78bfa);border-radius:0 3px 3px 0;transition:height 0.3s}
+.sidebar-link:hover{color:#cbd5e1;background:rgba(30,41,59,0.4)}
+.sidebar-link.active{color:#818cf8;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.08)}
+.sidebar-link.active::before{height:55%}
+.stat-card{animation:fadeUp 0.5s ease-out both}
+.stat-card:nth-child(1){animation-delay:0.03s}
+.stat-card:nth-child(2){animation-delay:0.06s}
+.stat-card:nth-child(3){animation-delay:0.09s}
+.stat-card:nth-child(4){animation-delay:0.12s}
+.tab-pane{animation:fadeUp 0.35s ease-out}
+.pg-btn{width:34px;height:34px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;transition:all 0.2s;cursor:pointer;font-size:0.8rem;font-weight:500;border:1px solid transparent}
+.pg-btn:hover{background:rgba(99,102,241,0.1);color:#818cf8;border-color:rgba(99,102,241,0.15)}
+.sea-inp{background:rgba(30,41,59,0.5);border:1px solid rgba(51,65,85,0.3);border-radius:10px;padding:8px 12px 8px 34px;color:#e2e8f0;font-size:0.82rem;width:100%;transition:all 0.3s;outline:none}
+.sea-inp:focus{border-color:rgba(99,102,241,0.35);box-shadow:0 0 20px rgba(99,102,241,0.05)}
+.toast{position:fixed;top:20px;right:20px;z-index:99999;padding:12px 18px;border-radius:10px;font-size:0.82rem;font-weight:500;display:flex;align-items:center;gap:10px;transform:translateX(120%);transition:transform 0.35s cubic-bezier(0.68,-0.55,0.27,1.55);max-width:360px}
+.toast.show{transform:translateX(0)}
+.toast.suc{background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.25);color:#22c55e;backdrop-filter:blur(12px)}
+.toast.err{background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.25);color:#ef4444;backdrop-filter:blur(12px)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(6px);z-index:9998;display:none;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal-box{background:rgba(15,23,42,0.95);backdrop-filter:blur(30px);border:1px solid rgba(51,65,85,0.4);border-radius:16px;padding:28px;width:90%;max-width:460px;max-height:85vh;overflow-y:auto;animation:fadeUp 0.25s ease-out}
+.form-inp{background:rgba(30,41,59,0.6);border:1px solid rgba(51,65,85,0.3);border-radius:10px;padding:10px 14px;color:#e2e8f0;font-size:0.85rem;width:100%;outline:none;transition:all 0.3s}
+.form-inp:focus{border-color:rgba(99,102,241,0.35);box-shadow:0 0 20px rgba(99,102,241,0.05)}
+@media(max-width:768px){
+.sidebar{position:fixed;left:-280px;top:0;bottom:0;width:260px;z-index:100;transition:left 0.3s}
+.sidebar.open{left:0}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99}
+.sidebar-overlay.show{display:block}
+.main-content{margin-left:0 !important}
+}
+</style>
+</head>
+<body>
+<div class="flex h-screen overflow-hidden">
+<div class="sidebar-overlay" id="sideOv" onclick="toggleSidebar()"></div>
+
+<aside class="sidebar glass flex-shrink-0 w-64 flex flex-col h-full z-50" id="sidebar" style="border-right:1px solid rgba(51,65,85,0.2)">
+  <div class="flex items-center gap-3 px-5 h-16 border-b border-dark-600/20 flex-shrink-0">
+    <div class="w-9 h-9 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30 flex-shrink-0">
+      <i class="fas fa-shield-halved text-white text-sm"></i>
+    </div>
+    <span class="font-extrabold text-base"><span class="gradient-text">Admin</span> <span class="text-dark-400 font-normal">Panel</span></span>
+  </div>
+  <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-0.5" id="sideNav">
+    <a class="sidebar-link active" data-tab="dash" onclick="switchTab('dash')"><i class="fas fa-chart-pie w-5 text-center"></i><span>Dashboard</span></a>
+    <a class="sidebar-link" data-tab="users" onclick="switchTab('users')"><i class="fas fa-users w-5 text-center"></i><span>Users</span></a>
+    <a class="sidebar-link" data-tab="history" onclick="switchTab('history')"><i class="fas fa-clock-rotate w-5 text-center"></i><span>History</span></a>
+    <a class="sidebar-link" data-tab="analytics" onclick="switchTab('analytics')"><i class="fas fa-chart-line w-5 text-center"></i><span>Analytics</span></a>
+    <a class="sidebar-link" data-tab="system" onclick="switchTab('system')"><i class="fas fa-microchip w-5 text-center"></i><span>System</span></a>
+    <a class="sidebar-link" data-tab="logs" onclick="switchTab('logs')"><i class="fas fa-clipboard-list w-5 text-center"></i><span>Admin Logs</span></a>
+    <a class="sidebar-link" data-tab="settings" onclick="switchTab('settings')"><i class="fas fa-sliders w-5 text-center"></i><span>Settings</span></a>
+    <a class="sidebar-link" data-tab="reports" onclick="switchTab('reports')"><i class="fas fa-file-export w-5 text-center"></i><span>Reports</span></a>
+  </nav>
+  <div class="border-t border-dark-600/20 px-3 py-3 flex-shrink-0">
+    <a href="/" class="sidebar-link"><i class="fas fa-arrow-left w-5 text-center"></i><span>Back to Site</span></a>
+  </div>
+</aside>
+
+<div class="main-content flex-1 flex flex-col min-w-0" style="margin-left:0">
+  <header class="glass flex items-center justify-between px-4 lg:px-6 h-16 flex-shrink-0 border-b border-dark-600/20" style="border-bottom:1px solid rgba(51,65,85,0.2)">
+    <div class="flex items-center gap-3">
+      <button onclick="toggleSidebar()" class="lg:hidden w-8 h-8 glass rounded-lg flex items-center justify-center text-dark-400 hover:text-white"><i class="fas fa-bars text-xs"></i></button>
+      <div><h2 class="text-sm font-bold text-white" id="pgTitle">Dashboard</h2><p class="text-[10px] text-dark-500" id="pgSub">System overview at a glance</p></div>
+    </div>
+    <div class="flex items-center gap-2">
+      <div class="w-7 h-7 bg-gradient-to-br from-indigo-500 to-emerald-500 rounded-lg flex items-center justify-center text-white text-[10px] font-bold shadow-lg shadow-indigo-500/20">
+        {{ (session.full_name or 'A')[0]|upper }}
+      </div>
+      <span class="text-xs text-dark-300 hidden sm:block">{{ session.full_name or 'Admin' }}</span>
+      <a href="/logout" class="w-7 h-7 glass rounded-lg flex items-center justify-center text-dark-400 hover:text-red-400" title="Sign Out"><i class="fas fa-right-from-bracket text-xs"></i></a>
+    </div>
+  </header>
+
+  <main class="flex-1 overflow-y-auto p-4 lg:p-6 relative" id="mainContent">
+    <div class="absolute inset-0 pointer-events-none overflow-hidden">
+      <div class="absolute top-20 left-10 w-80 h-80 bg-indigo-500/5 rounded-full blur-3xl"></div>
+      <div class="absolute bottom-20 right-10 w-80 h-80 bg-purple-500/5 rounded-full blur-3xl"></div>
+      <div class="absolute top-1/3 left-1/3 w-[500px] h-[500px] bg-emerald-500/3 rounded-full blur-3xl"></div>
+      <div style="position:absolute;top:12%;left:8%;width:3px;height:3px;background:rgba(99,102,241,0.3);border-radius:50%;animation:float 12s ease-in-out infinite"></div>
+      <div style="position:absolute;top:25%;left:88%;width:4px;height:4px;background:rgba(168,85,247,0.2);border-radius:50%;animation:float 15s ease-in-out infinite 2s"></div>
+      <div style="position:absolute;top:75%;left:15%;width:2px;height:2px;background:rgba(34,197,94,0.2);border-radius:50%;animation:float 10s ease-in-out infinite 4s"></div>
+      <div style="position:absolute;top:82%;right:18%;width:3px;height:3px;background:rgba(99,102,241,0.2);border-radius:50%;animation:float 14s ease-in-out infinite 1s"></div>
+    </div>
+
+    <div class="relative z-10 max-w-7xl mx-auto">
+      {% if session.get("is_admin") %}
+      <div id="tab-dash" class="tab-pane"></div>
+      <div id="tab-users" class="tab-pane hidden"></div>
+      <div id="tab-history" class="tab-pane hidden"></div>
+      <div id="tab-analytics" class="tab-pane hidden"></div>
+      <div id="tab-system" class="tab-pane hidden"></div>
+      <div id="tab-logs" class="tab-pane hidden"></div>
+      <div id="tab-settings" class="tab-pane hidden"></div>
+      <div id="tab-reports" class="tab-pane hidden"></div>
+      {% else %}
+      <div class="flex items-center justify-center min-h-[60vh]">
+        <div class="glass-card rounded-2xl p-8 lg:p-12 max-w-lg text-center" style="animation:fadeUp 0.5s ease-out">
+          <div class="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-xl shadow-indigo-500/20">
+            <i class="fas fa-shield-halved text-white text-xl"></i>
+          </div>
+          <h2 class="text-xl font-extrabold text-white mb-2">Admin Access Required</h2>
+          <p class="text-dark-400 text-sm mb-6">This panel is restricted to administrators. Please sign in with an admin account to access system controls, user management, and analytics.</p>
+          <div class="flex items-center justify-center gap-3">
+            <a href="/login" class="px-6 py-2.5 bg-indigo-500/15 text-indigo-400 text-sm font-semibold rounded-xl border border-indigo-500/25 hover:bg-indigo-500/25 transition-all"><i class="fas fa-right-to-bracket mr-2"></i>Sign In as Admin</a>
+            <a href="/dashboard" class="px-6 py-2.5 glass text-dark-300 text-sm font-semibold rounded-xl hover:text-white transition-all"><i class="fas fa-chart-pie mr-2"></i>Go to Dashboard</a>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </main>
+</div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay"><div class="modal-box" id="modalBox"></div></div>
+<div id="toastBox"></div>
+
+<script>
+var AUTH_TOKEN = '{{ session.get("jwt_token", "") }}';
+var IS_ADMIN = {{ "true" if session.get("is_admin") else "false" }};
+var curTab = 'dash', charts = {};
+var uPage=1, uSearch='', uDebounce, uFilter='';
+var hPage=1, hSearch='', hDebounce, hFilter='';
+var lPage=1;
+
+function apiFetch(url,o){o=o||{};o.headers=o.headers||{};o.headers['Content-Type']='application/json';o.headers['Authorization']='Bearer '+AUTH_TOKEN;o.credentials='same-origin';return fetch(url,o)}
+function apiGet(u){return apiFetch(u,{method:'GET'})}
+function apiPost(u,d){return apiFetch(u,{method:'POST',body:JSON.stringify(d)})}
+function apiPut(u,d){return apiFetch(u,{method:'PUT',body:JSON.stringify(d)})}
+function apiDel(u){return apiFetch(u,{method:'DELETE'})}
+
+function toast(msg,tp){tp=tp||'suc';var t=document.createElement('div');t.className='toast '+tp;
+var ic=tp==='suc'?'fa-check-circle':'fa-exclamation-circle';
+t.innerHTML='<i class="fas '+ic+'"></i>'+msg;
+document.getElementById('toastBox').appendChild(t);
+requestAnimationFrame(function(){t.classList.add('show')});
+setTimeout(function(){t.classList.remove('show');setTimeout(function(){t.remove()},350)},3000)}
+
+function openModal(h){document.getElementById('modalBox').innerHTML=h;document.getElementById('modalOverlay').classList.add('open')}
+function closeModal(){document.getElementById('modalOverlay').classList.remove('open')}
+document.getElementById('modalOverlay').addEventListener('click',function(e){if(e.target===this)closeModal()})
+
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('sideOv').classList.toggle('show')}
+
+function switchTab(t){
+  curTab=t;
+  document.querySelectorAll('.tab-pane').forEach(function(e){e.classList.add('hidden')});
+  document.getElementById('tab-'+t).classList.remove('hidden');
+  document.querySelectorAll('.sidebar-link').forEach(function(e){e.classList.remove('active')});
+  var el=document.querySelector('.sidebar-link[data-tab="'+t+'"]');if(el)el.classList.add('active');
+  var T={dash:['Dashboard','System overview at a glance'],users:['User Management','Manage registered users'],history:['Prediction History','All detection records'],analytics:['Analytics','Deep insights and trends'],system:['System Health','AI engine & infrastructure status'],logs:['Admin Logs','Audit trail of actions'],settings:['Settings','System configuration'],reports:['Reports','Export data & generate reports']};
+  if(T[t]){document.getElementById('pgTitle').textContent=T[t][0];document.getElementById('pgSub').textContent=T[t][1]}
+  if(IS_ADMIN){if(t==='dash')ldDash();else if(t==='users')ldUsers();else if(t==='history')ldHist();else if(t==='analytics')ldAnalytics();else if(t==='system')ldSystem();else if(t==='logs')ldLogs();else if(t==='settings')ldSettings();else if(t==='reports')ldReports();}
+  if(window.innerWidth<768){document.getElementById('sidebar').classList.remove('open');document.getElementById('sideOv').classList.remove('show')}
+}
+
+function killC(id){if(charts[id]){charts[id].destroy();delete charts[id]}}
+
+function ldDash(){
+  apiGet('/api/admin/dashboard').then(function(r){return r.json()}).then(function(d){
+    if(d.error){document.getElementById('tab-dash').innerHTML='<div class="glass-card rounded-2xl p-8 text-center" style="border-color:rgba(239,68,68,0.2)"><i class="fas fa-exclamation-triangle text-3xl text-red-400 mb-2"></i><p class="text-red-400 text-sm">'+d.error+'</p></div>';return}
+    var h='<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">';
+    var cs=[
+      {ic:'users',lb:'Total Users',v:d.total_users,cl:'from-blue-500 to-blue-600',sh:'shadow-blue-500/20',bg:'rgba(59,130,246,0.1)'},
+      {ic:'user-check',lb:'Active Users',v:d.active_users,cl:'from-emerald-500 to-emerald-600',sh:'shadow-emerald-500/20',bg:'rgba(34,197,94,0.1)'},
+      {ic:'chart-line',lb:'Predictions',v:d.total_predictions,cl:'from-purple-500 to-purple-600',sh:'shadow-purple-500/20',bg:'rgba(168,85,247,0.1)'},
+      {ic:'shield-alt',lb:'Fake Detected',v:d.fake_count,cl:'from-red-500 to-red-600',sh:'shadow-red-500/20',bg:'rgba(239,68,68,0.1)'}
+    ];
+    cs.forEach(function(c){h+='<div class="stat-card glass-card rounded-2xl p-4"><div class="flex items-center gap-3"><div class="w-11 h-11 bg-gradient-to-br '+c.cl+' rounded-xl flex items-center justify-center shadow-lg '+c.sh+'"><i class="fas fa-'+c.ic+' text-white text-sm"></i></div><div class="min-w-0"><p class="text-dark-500 text-[10px] uppercase tracking-wider font-medium">'+c.lb+'</p><p class="text-2xl font-extrabold text-white mt-0.5">'+c.v+'</p></div></div></div>'});
+    h+='</div><div class="grid lg:grid-cols-2 gap-4 mb-5">'+
+      '<div class="glass-card rounded-2xl p-5"><h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2"><i class="fas fa-chart-pie text-indigo-400"></i>Real vs Fake</h3><canvas id="cPie" height="230"></canvas></div>'+
+      '<div class="glass-card rounded-2xl p-5"><h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2"><i class="fas fa-chart-bar text-indigo-400"></i>7-Day Timeline</h3><canvas id="cBar" height="230"></canvas></div></div>';
+    h+='<div class="glass-card rounded-2xl p-5"><h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2"><i class="fas fa-clock-rotate text-indigo-400"></i>Recent Predictions</h3>';
+    if(d.recent_predictions&&d.recent_predictions.length){
+      h+='<div class="overflow-x-auto"><table class="w-full text-xs"><thead><tr class="border-b" style="border-color:rgba(51,65,85,0.2)">'+
+        '<th class="text-left py-2 px-3 text-dark-500 uppercase tracking-wider">Text</th>'+
+        '<th class="text-center py-2 px-3 text-dark-500 uppercase tracking-wider">Result</th>'+
+        '<th class="text-center py-2 px-3 text-dark-500 uppercase tracking-wider">Conf</th>'+
+        '<th class="text-right py-2 px-3 text-dark-500 uppercase tracking-wider">Time</th></tr></thead><tbody>';
+      d.recent_predictions.forEach(function(p){
+        var c=p.prediction==='REAL'?'text-emerald-400 border-emerald-500/15 bg-emerald-500/10':'text-red-400 border-red-500/15 bg-red-500/10';
+        var ic=p.prediction==='REAL'?'fa-check-circle':'fa-times-circle';
+        h+='<tr class="border-b" style="border-color:rgba(51,65,85,0.1)"><td class="py-2.5 px-3"><p class="text-dark-300 truncate max-w-[180px] lg:max-w-xs">'+(p.news_text||'')+'</p></td>'+
+          '<td class="py-2.5 px-3 text-center"><span class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-full border '+c+'"><i class="fas '+ic+'"></i>'+p.prediction+'</span></td>'+
+          '<td class="py-2.5 px-3 text-center text-white font-bold">'+p.confidence+'%</td>'+
+          '<td class="py-2.5 px-3 text-right text-dark-500 text-[10px]">'+(p.created_at?new Date(p.created_at).toLocaleString():'-')+'</td></tr>'});
+      h+='</tbody></table></div>'}else{h+='<p class="text-dark-500 text-center py-6 text-sm">No predictions yet.</p>'}
+    h+='</div>';document.getElementById('tab-dash').innerHTML=h;
+
+    killC('cPie');charts.cPie=new Chart(document.getElementById('cPie'),{type:'doughnut',
+      data:{labels:['Real','Fake'],datasets:[{data:[Math.max(d.real_count,1),Math.max(d.fake_count,1)],backgroundColor:['#22c55e','#ef4444'],borderWidth:0,hoverOffset:8}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'72%',
+        plugins:{legend:{position:'bottom',labels:{color:'#94a3b8',padding:14,usePointStyle:true,pointStyle:'circle',font:{size:10}}}}}});
+    apiGet('/api/admin/stats/timeline?days=7').then(function(r){return r.json()}).then(function(tl){
+      var data=tl.timeline||[];if(!data.length)data=[{date:'-',total:0,real:0,fake:0}];
+      killC('cBar');charts.cBar=new Chart(document.getElementById('cBar'),{type:'bar',
+        data:{labels:data.map(function(d){return d.date}),datasets:[
+          {label:'Real',data:data.map(function(d){return d.real}),backgroundColor:'rgba(34,197,94,0.65)',borderRadius:4,barPercentage:0.55},
+          {label:'Fake',data:data.map(function(d){return d.fake}),backgroundColor:'rgba(239,68,68,0.65)',borderRadius:4,barPercentage:0.55}]},
+        options:{responsive:true,maintainAspectRatio:false,
+          plugins:{legend:{labels:{color:'#94a3b8',usePointStyle:true,font:{size:10}}}},
+          scales:{x:{ticks:{color:'#64748b',font:{size:9}},grid:{color:'rgba(71,85,105,0.12)'}},
+                  y:{ticks:{color:'#64748b',font:{size:9}},grid:{color:'rgba(71,85,105,0.12)'}}}}})})});
+  }).catch(function(){document.getElementById('tab-dash').innerHTML='<div class="glass-card rounded-2xl p-8 text-center" style="border-color:rgba(239,68,68,0.2)"><i class="fas fa-exclamation-triangle text-3xl text-red-400 mb-2"></i><p class="text-red-400 text-sm">Failed to connect. Make sure the server is running.</p></div>'})
+}
+
+function ldUsers(){
+  var p='page='+uPage+'&per_page=12';if(uSearch)p+='&search='+encodeURIComponent(uSearch);
+  apiGet('/api/admin/users?'+p).then(function(r){return r.json()}).then(function(d){
+    var us=d.users||[];
+    var h='<div class="glass-card rounded-2xl p-5"><div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">'+
+      '<h3 class="text-sm font-bold text-white flex items-center gap-2"><i class="fas fa-users text-indigo-400"></i>All Users <span class="text-dark-500 text-[10px] font-normal">('+d.total+')</span></h3>'+
+      '<div class="flex items-center gap-2 w-full sm:w-auto"><div class="relative flex-1 sm:w-48"><i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-dark-500 text-[10px]"></i>'+
+      '<input type="text" id="uSearch" placeholder="Search..." class="sea-inp" oninput="debU()" /></div>'+
+      '<button onclick="showCreateUser()" class="px-3 py-2 bg-indigo-500/15 text-indigo-400 text-xs rounded-xl border border-indigo-500/20 hover:bg-indigo-500/25 transition-all font-medium whitespace-nowrap"><i class="fas fa-plus mr-1"></i>Add</button></div></div>';
+    if(us.length){
+      h+='<div class="overflow-x-auto"><table class="w-full text-xs"><thead><tr class="border-b" style="border-color:rgba(51,65,85,0.2)">'+
+        '<th class="text-left py-2.5 px-3 text-dark-500 uppercase tracking-wider">User</th>'+
+        '<th class="text-left py-2.5 px-3 text-dark-500 uppercase tracking-wider hidden md:table-cell">Email</th>'+
+        '<th class="text-center py-2.5 px-3 text-dark-500 uppercase tracking-wider">Role</th>'+
+        '<th class="text-center py-2.5 px-3 text-dark-500 uppercase tracking-wider">Status</th>'+
+        '<th class="text-center py-2.5 px-3 text-dark-500 uppercase tracking-wider">Actions</th></tr></thead><tbody>';
+      us.forEach(function(u){
+        var init=(u.full_name||u.username||'U')[0].toUpperCase();
+        var st=u.is_active?'<span class="status-dot online" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#22c55e;box-shadow:0 0 6px rgba(34,197,94,0.5);margin-right:5px"></span>Active':'<span class="status-dot offline" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#ef4444;box-shadow:0 0 6px rgba(239,68,68,0.5);margin-right:5px"></span>Inactive';
+        h+='<tr class="border-b" style="border-color:rgba(51,65,85,0.1)"><td class="py-2.5 px-3"><div class="flex items-center gap-2.5"><div class="w-7 h-7 bg-gradient-to-br from-indigo-500 to-emerald-500 rounded-lg flex items-center justify-center text-white text-[10px] font-bold shadow-lg flex-shrink-0">'+init+'</div><span class="text-white text-xs font-medium truncate max-w-[120px]">'+(u.full_name||u.username)+'</span></div></td>'+
+          '<td class="py-2.5 px-3 text-dark-300 text-[10px] hidden md:table-cell">'+u.email+'</td>'+
+          '<td class="py-2.5 px-3 text-center">'+(u.is_admin?'<span class="px-2 py-0.5 bg-indigo-500/15 text-indigo-400 text-[10px] rounded-full border border-indigo-500/20 font-medium">Admin</span>':'<span class="text-dark-500 text-[10px]">User</span>')+'</td>'+
+          '<td class="py-2.5 px-3 text-center"><span class="text-[10px]">'+st+'</span></td>'+
+          '<td class="py-2.5 px-3 text-center"><div class="flex items-center justify-center gap-1">'+
+          (u.is_admin?'':(!u.is_active
+            ?'<button onclick="togU('+u.id+')" class="w-7 h-7 bg-emerald-500/10 rounded-lg flex items-center justify-center text-emerald-400 hover:bg-emerald-500/20 transition-all" title="Activate"><i class="fas fa-user-check text-[10px]"></i></button>'
+            :'<button onclick="togU('+u.id+')" class="w-7 h-7 bg-amber-500/10 rounded-lg flex items-center justify-center text-amber-400 hover:bg-amber-500/20 transition-all" title="Deactivate"><i class="fas fa-user-times text-[10px]"></i></button>')+
+          (u.is_admin?'':'<button onclick="editU('+u.id+')" class="w-7 h-7 bg-blue-500/10 rounded-lg flex items-center justify-center text-blue-400 hover:bg-blue-500/20 transition-all" title="Edit"><i class="fas fa-pen text-[10px]"></i></button>'+
+            '<button onclick="delU('+u.id+',\''+u.username+'\')" class="w-7 h-7 bg-red-500/10 rounded-lg flex items-center justify-center text-red-400 hover:bg-red-500/20 transition-all" title="Delete"><i class="fas fa-trash-can text-[10px]"></i></button>'))+
+          '</div></td></tr>'});
+      h+='</tbody></table></div>'}else{h+='<p class="text-dark-500 text-center py-8 text-sm">No users found.</p>'}
+    if(d.pages>1){
+      h+='<div class="flex items-center justify-center gap-1 mt-4">';
+      h+='<button onclick="uPg('+(uPage-1)+')" class="pg-btn '+(uPage<=1?'opacity-30 pointer-events-none text-dark-600':'glass text-dark-400')+'"><i class="fas fa-chevron-left text-[10px]"></i></button>';
+      for(var i=1;i<=d.pages;i++){h+='<button onclick="uPg('+i+')" class="pg-btn '+(i===uPage?'bg-indigo-500/20 text-indigo-400 border-indigo-500/30':'glass text-dark-400')+'">'+i+'</button>'}
+      h+='<button onclick="uPg('+(uPage+1)+')" class="pg-btn '+(uPage>=d.pages?'opacity-30 pointer-events-none text-dark-600':'glass text-dark-400')+'"><i class="fas fa-chevron-right text-[10px]"></i></button></div>'}
+    h+='</div>';document.getElementById('tab-users').innerHTML=h;
+  }).catch(function(){document.getElementById('tab-users').innerHTML='<div class="glass-card rounded-2xl p-8 text-center" style="border-color:rgba(239,68,68,0.2)"><i class="fas fa-exclamation-triangle text-3xl text-red-400 mb-2"></i><p class="text-red-400 text-sm">Failed to load users.</p></div>'})
+}
+function debU(){clearTimeout(uDebounce);uDebounce=setTimeout(function(){uSearch=document.getElementById('uSearch').value;uPage=1;ldUsers()},350)}
+function uPg(p){uPage=p;ldUsers()}
+function togU(id){apiPost('/api/admin/users/'+id+'/toggle',{}).then(function(r){return r.json()}).then(function(r){if(r.message){toast(r.message,'suc');ldUsers()}else toast(r.error||'Failed','err')})}
+function delU(id,nm){openModal('<h3 class="text-base font-bold text-white mb-2"><i class="fas fa-trash-can text-red-400 mr-2"></i>Delete User</h3><p class="text-dark-400 text-sm mb-5">Are you sure you want to delete <strong class="text-white">'+nm+'</strong>? This cannot be undone.</p><div class="flex gap-3 justify-end"><button onclick="closeModal()" class="px-4 py-2 glass text-dark-300 text-sm rounded-xl hover:text-white">Cancel</button><button onclick="confirmDelU('+id+')" class="px-4 py-2 bg-red-500/15 text-red-400 text-sm rounded-xl border border-red-500/20 hover:bg-red-500/25">Delete</button></div>')}
+function confirmDelU(id){apiDel('/api/admin/users/'+id).then(function(r){return r.json()}).then(function(r){closeModal();if(r.message){toast(r.message,'suc');ldUsers()}else toast(r.error||'Failed','err')})}
+function editU(id){apiGet('/api/admin/users?page=1&per_page=100').then(function(r){return r.json()}).then(function(d){var u=null;d.users.forEach(function(x){if(x.id===id)u=x});if(!u){toast('User not found','err');return}
+  openModal('<h3 class="text-base font-bold text-white mb-4"><i class="fas fa-pen text-blue-400 mr-2"></i>Edit User</h3>'+
+    '<div class="space-y-3"><div><label class="text-dark-400 text-xs block mb-1">Full Name</label><input id="eName" class="form-inp" value="'+(u.full_name||'')+'" /></div>'+
+    '<div><label class="text-dark-400 text-xs block mb-1">Email</label><input id="eEmail" class="form-inp" value="'+u.email+'" /></div>'+
+    '<div><label class="text-dark-400 text-xs block mb-1">New Password (leave blank to keep)</label><input id="ePass" class="form-inp" type="password" placeholder="••••••••" /></div></div>'+
+    '<div class="flex gap-3 justify-end mt-5"><button onclick="closeModal()" class="px-4 py-2 glass text-dark-300 text-sm rounded-xl hover:text-white">Cancel</button>'+
+    '<button onclick="confirmEditU('+id+')" class="px-4 py-2 bg-blue-500/15 text-blue-400 text-sm rounded-xl border border-blue-500/20 hover:bg-blue-500/25">Save Changes</button></div>')})}
+function confirmEditU(id){
+  var name=document.getElementById('eName').value;var email=document.getElementById('eEmail').value;var pass=document.getElementById('ePass').value;
+  var data={};if(name)data.full_name=name;if(email)data.email=email;if(pass)data.password=pass;
+  apiPut('/api/admin/users/'+id,data).then(function(r){return r.json()}).then(function(r){closeModal();if(r.message){toast(r.message,'suc');ldUsers()}else toast(r.error||'Failed','err')})}
+function showCreateUser(){openModal(
+  '<h3 class="text-base font-bold text-white mb-4"><i class="fas fa-user-plus text-emerald-400 mr-2"></i>Create User</h3>'+
+  '<div class="space-y-3"><div><label class="text-dark-400 text-xs block mb-1">Username *</label><input id="cUser" class="form-inp" placeholder="johndoe" /></div>'+
+  '<div><label class="text-dark-400 text-xs block mb-1">Full Name</label><input id="cName" class="form-inp" placeholder="John Doe" /></div>'+
+  '<div><label class="text-dark-400 text-xs block mb-1">Email *</label><input id="cEmail" class="form-inp" type="email" placeholder="john@example.com" /></div>'+
+  '<div><label class="text-dark-400 text-xs block mb-1">Password *</label><input id="cPass" class="form-inp" type="password" placeholder="Min 6 characters" /></div></div>'+
+  '<div class="flex gap-3 justify-end mt-5"><button onclick="closeModal()" class="px-4 py-2 glass text-dark-300 text-sm rounded-xl hover:text-white">Cancel</button>'+
+  '<button onclick="confirmCreateU()" class="px-4 py-2 bg-emerald-500/15 text-emerald-400 text-sm rounded-xl border border-emerald-500/20 hover:bg-emerald-500/25">Create</button></div>')}
+function confirmCreateU(){
+  var un=document.getElementById('cUser').value;var nm=document.getElementById('cName').value;var em=document.getElementById('cEmail').value;var pw=document.getElementById('cPass').value;
+  if(!un||!em||!pw){toast('Username, email, and password are required','err');return}
+  apiPost('/api/admin/users',{username:un,full_name:nm,email:em,password:pw}).then(function(r){return r.json()}).then(function(r){closeModal();if(r.message){toast(r.message,'suc');ldUsers()}else toast(r.error||'Failed','err')})}
+
+function ldHist(){
+  var p='page='+hPage+'&per_page=12';if(hSearch)p+='&search='+encodeURIComponent(hSearch);
+  apiGet('/api/admin/history?'+p).then(function(r){return r.json()}).then(function(d){
+    var items=d.history||[];
+    var h='<div class="glass-card rounded-2xl p-5"><div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">'+
+      '<h3 class="text-sm font-bold text-white flex items-center gap-2"><i class="fas fa-clock-rotate text-indigo-400"></i>History <span class="text-dark-500 text-[10px] font-normal">('+d.total+')</span></h3>'+
+      '<div class="flex items-center gap-2 w-full sm:w-auto"><div class="relative flex-1 sm:w-48"><i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-dark-500 text-[10px]"></i>'+
+      '<input type="text" id="hSearch" placeholder="Search..." class="sea-inp" oninput="debH()" /></div>'+
+      '<button onclick="clearHist()" class="px-3 py-2 bg-red-500/10 text-red-400 text-xs rounded-xl border border-red-500/15 hover:bg-red-500/20 transition-all font-medium"><i class="fas fa-trash-can mr-1"></i>Clear</button></div></div>';
+    if(items.length){
+      h+='<div class="space-y-1.5">';
+      items.forEach(function(it){
+        var c=it.prediction==='REAL'?'text-emerald-400 border-emerald-500/12 bg-emerald-500/8':'text-red-400 border-red-500/12 bg-red-500/8';
+        var ic=it.prediction==='REAL'?'fa-check-circle':'fa-times-circle';
+        h+='<div class="glass rounded-xl p-3 flex items-center justify-between" style="border:1px solid rgba(51,65,85,0.15)">'+
+          '<div class="flex-1 min-w-0 mr-2"><p class="text-dark-200 text-xs truncate">'+(it.news_text||'')+'</p>'+
+          '<div class="flex items-center gap-2 mt-1"><span class="text-dark-500 text-[10px]">'+fmtDate(it.created_at)+'</span>'+
+          (it.method?'<span class="text-dark-600 text-[10px]">via '+it.method+'</span>':'')+'</div></div>'+
+          '<div class="flex items-center gap-2 shrink-0"><span class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-full border '+c+'"><i class="fas '+ic+'"></i>'+it.prediction+'</span>'+
+          '<span class="text-white font-bold text-xs">'+it.confidence+'%</span>'+
+          '<button onclick="delHist('+it.id+')" class="w-6 h-6 rounded-lg flex items-center justify-center text-dark-500 hover:text-red-400 hover:bg-red-500/10 transition-all"><i class="fas fa-xmark text-[10px]"></i></button></div></div>'});
+      h+='</div>'}else{h+='<p class="text-dark-500 text-center py-8 text-sm">No history entries found.</p>'}
+    if(d.pages>1){
+      h+='<div class="flex items-center justify-center gap-1 mt-4">';
+      h+='<button onclick="hPg('+(hPage-1)+')" class="pg-btn '+(hPage<=1?'opacity-30 pointer-events-none text-dark-600':'glass text-dark-400')+'"><i class="fas fa-chevron-left text-[10px]"></i></button>';
+      for(var i=1;i<=d.pages;i++){h+='<button onclick="hPg('+i+')" class="pg-btn '+(i===hPage?'bg-indigo-500/20 text-indigo-400 border-indigo-500/30':'glass text-dark-400')+'">'+i+'</button>'}
+      h+='<button onclick="hPg('+(hPage+1)+')" class="pg-btn '+(hPage>=d.pages?'opacity-30 pointer-events-none text-dark-600':'glass text-dark-400')+'"><i class="fas fa-chevron-right text-[10px]"></i></button></div>'}
+    h+='</div>';document.getElementById('tab-history').innerHTML=h;
+  }).catch(function(){document.getElementById('tab-history').innerHTML='<div class="glass-card rounded-2xl p-8 text-center" style="border-color:rgba(239,68,68,0.2)"><i class="fas fa-exclamation-triangle text-3xl text-red-400 mb-2"></i><p class="text-red-400 text-sm">Failed to load history.</p></div>'})
+}
+function debH(){clearTimeout(hDebounce);hDebounce=setTimeout(function(){hSearch=document.getElementById('hSearch').value;hPage=1;ldHist()},350)}
+function hPg(p){hPage=p;ldHist()}
+function delHist(id){if(!confirm('Delete this history entry?'))return;apiDel('/api/admin/history/'+id).then(function(r){return r.json()}).then(function(r){if(r.message){toast(r.message,'suc');ldHist()}else toast(r.error||'Failed','err')})}
+function clearHist(){openModal('<h3 class="text-base font-bold text-white mb-2"><i class="fas fa-trash-can text-red-400 mr-2"></i>Clear All History</h3><p class="text-dark-400 text-sm mb-5">Are you sure? This will permanently delete ALL history entries and prediction logs.</p><div class="flex gap-3 justify-end"><button onclick="closeModal()" class="px-4 py-2 glass text-dark-300 text-sm rounded-xl hover:text-white">Cancel</button><button onclick="confirmClearHist()" class="px-4 py-2 bg-red-500/15 text-red-400 text-sm rounded-xl border border-red-500/20 hover:bg-red-500/25">Delete All</button></div>')}
+function confirmClearHist(){apiDel('/api/admin/history').then(function(r){return r.json()}).then(function(r){closeModal();if(r.message){toast(r.message,'suc');ldHist();ldDash()}else toast(r.error||'Failed','err')})}
+
+function ldAnalytics(){
+  apiGet('/api/admin/stats/timeline?days=30').then(function(r){return r.json()}).then(function(tl){
+    var data=tl.timeline||[];
+    var total=data.reduce(function(s,d){return s+d.total},0);
+    var fake=data.reduce(function(s,d){return s+d.fake},0);
+    var real=total-fake;var acc=total>0?Math.round(real/total*100):0;
+    var h='<div class="glass-card rounded-2xl p-5 mb-5"><h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2"><i class="fas fa-chart-line text-indigo-400"></i>30-Day Detection Timeline</h3><canvas id="aLine" height="250"></canvas></div>'+
+      '<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">'+
+      '<div class="glass-card rounded-2xl p-4 text-center"><p class="text-dark-500 text-[10px] uppercase tracking-wider mb-1">Total</p><p class="text-2xl font-extrabold text-white">'+total+'</p></div>'+
+      '<div class="glass-card rounded-2xl p-4 text-center"><p class="text-dark-500 text-[10px] uppercase tracking-wider mb-1">Real</p><p class="text-2xl font-extrabold text-emerald-400">'+real+'</p></div>'+
+      '<div class="glass-card rounded-2xl p-4 text-center"><p class="text-dark-500 text-[10px] uppercase tracking-wider mb-1">Fake</p><p class="text-2xl font-extrabold text-red-400">'+fake+'</p></div>'+
+      '<div class="glass-card rounded-2xl p-4 text-center"><p class="text-dark-500 text-[10px] uppercase tracking-wider mb-1">Accuracy</p><p class="text-2xl font-extrabold gradient-text">'+acc+'%</p></div></div>';
+    h+='<div class="grid md:grid-cols-2 gap-4 mb-5">'+
+      '<div class="glass-card rounded-2xl p-5"><h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2"><i class="fas fa-chart-pie text-indigo-400"></i>Distribution</h3><canvas id="aPie" height="220"></canvas></div>'+
+      '<div class="glass-card rounded-2xl p-5"><h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2"><i class="fas fa-layer-group text-indigo-400"></i>By Detection Method</h3><canvas id="aMethod" height="220"></canvas></div></div>';
+
+    // Top users
+    h+='<div class="glass-card rounded-2xl p-5"><h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2"><i class="fas fa-trophy text-indigo-400"></i>Top Users</h3><div id="aTopUsers"><p class="text-dark-500 text-sm text-center py-4"><i class="fas fa-spinner fa-spin mr-2"></i>Loading...</p></div></div>';
+    document.getElementById('tab-analytics').innerHTML=h;
+
+    if(data.length){
+      killC('aLine');charts.aLine=new Chart(document.getElementById('aLine'),{type:'line',
+        data:{labels:data.map(function(d){return d.date}),datasets:[
+          {label:'Total',data:data.map(function(d){return d.total}),borderColor:'#6366f1',backgroundColor:'rgba(99,102,241,0.06)',fill:true,tension:0.4,pointRadius:2.5,pointBackgroundColor:'#6366f1'},
+          {label:'Fake',data:data.map(function(d){return d.fake}),borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,0.04)',fill:true,tension:0.4,borderDash:[4,4],pointRadius:2.5,pointBackgroundColor:'#ef4444'},
+          {label:'Real',data:data.map(function(d){return d.real}),borderColor:'#22c55e',backgroundColor:'rgba(34,197,94,0.04)',fill:true,tension:0.4,borderDash:[4,4],pointRadius:2.5,pointBackgroundColor:'#22c55e'}]},
+        options:{responsive:true,maintainAspectRatio:false,
+          plugins:{legend:{labels:{color:'#94a3b8',usePointStyle:true,font:{size:10}}}},
+          scales:{x:{ticks:{color:'#64748b',font:{size:9},maxTicksLimit:12},grid:{color:'rgba(71,85,105,0.1)'}},
+                  y:{ticks:{color:'#64748b',font:{size:9}},grid:{color:'rgba(71,85,105,0.1)'}}}}});
+      killC('aPie');charts.aPie=new Chart(document.getElementById('aPie'),{type:'doughnut',
+        data:{labels:['Real','Fake'],datasets:[{data:[Math.max(real,1),Math.max(fake,1)],backgroundColor:['#22c55e','#ef4444'],borderWidth:0,hoverOffset:8}]},
+        options:{responsive:true,maintainAspectRatio:false,cutout:'72%',
+          plugins:{legend:{position:'bottom',labels:{color:'#94a3b8',padding:14,usePointStyle:true,pointStyle:'circle',font:{size:10}}}}}});
+    }
+    apiGet('/api/admin/stats/methods').then(function(r){return r.json()}).then(function(md){
+      var m=md.methods||{};var labs=Object.keys(m);var vals=labs.map(function(k){return m[k]});
+      killC('aMethod');
+      if(labs.length){charts.aMethod=new Chart(document.getElementById('aMethod'),{type:'bar',
+        data:{labels:labs,datasets:[{label:'Predictions',data:vals,backgroundColor:['rgba(99,102,241,0.65)','rgba(34,197,94,0.65)','rgba(239,68,68,0.65)','rgba(234,179,8,0.65)'],borderRadius:4,barPercentage:0.6}]},
+        options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',
+          plugins:{legend:{display:false}},
+          scales:{x:{ticks:{color:'#64748b',font:{size:9}},grid:{color:'rgba(71,85,105,0.1)'}},
+                  y:{ticks:{color:'#94a3b8',font:{size:9}},grid:{color:'rgba(71,85,105,0.1)'}}}}})}
+      else document.getElementById('aMethod').parentElement.innerHTML+='<p class="text-dark-500 text-sm text-center py-4">No method data yet.</p>'});
+    apiGet('/api/admin/stats/top-users').then(function(r){return r.json()}).then(function(tu){
+      var us=tu.top_users||[];var uh='';
+      if(us.length){uh='<div class="space-y-1.5">';us.forEach(function(u,i){uh+='<div class="flex items-center justify-between py-2 border-b" style="border-color:rgba(51,65,85,0.1)"><div class="flex items-center gap-3"><span class="w-5 h-5 rounded-lg flex items-center justify-center text-[10px] font-bold '+(i===0?'bg-amber-500/20 text-amber-400':i===1?'bg-slate-500/20 text-slate-400':i===2?'bg-amber-700/20 text-amber-600':'bg-dark-700/50 text-dark-500')+'">'+(i+1)+'</span><span class="text-dark-200 text-xs">'+(u.name||'Unknown')+'</span></div><span class="text-white font-bold text-xs">'+u.count+' predictions</span></div>'});uh+='</div>'}else{uh='<p class="text-dark-500 text-sm text-center py-4">No data yet.</p>'}
+      document.getElementById('aTopUsers').innerHTML=uh});
+  }).catch(function(){document.getElementById('tab-analytics').innerHTML='<div class="glass-card rounded-2xl p-8 text-center" style="border-color:rgba(239,68,68,0.2)"><i class="fas fa-exclamation-triangle text-3xl text-red-400 mb-2"></i><p class="text-red-400 text-sm">Failed to load analytics.</p></div>'})
+}
+
+function ldSystem(){
+  var start=Date.now();
+  var h='<div class="grid md:grid-cols-2 gap-4 mb-5">'+
+    '<div class="glass-card rounded-2xl p-5"><h3 class="text-sm font-bold text-white mb-4 flex items-center gap-2"><i class="fas fa-microchip text-indigo-400"></i>AI Engine Status</h3><div class="space-y-3">'+
+    '<div class="flex items-center justify-between py-2.5 border-b" style="border-color:rgba(51,65,85,0.1)"><div class="flex items-center gap-2.5"><div class="w-7 h-7 bg-purple-500/12 rounded-lg flex items-center justify-center"><i class="fas fa-bolt text-purple-400 text-[10px]"></i></div><span class="text-dark-300 text-xs">Groq API</span></div><span id="sGroq" class="flex items-center gap-1.5 text-xs"><span class="w-2 h-2 rounded-full bg-yellow-500"></span>Checking...</span></div>'+
+    '<div class="flex items-center justify-between py-2.5 border-b" style="border-color:rgba(51,65,85,0.1)"><div class="flex items-center gap-2.5"><div class="w-7 h-7 bg-blue-500/12 rounded-lg flex items-center justify-center"><i class="fas fa-brain text-blue-400 text-[10px]"></i></div><span class="text-dark-300 text-xs">Ollama Phi-3</span></div><span id="sOllama" class="flex items-center gap-1.5 text-xs"><span class="w-2 h-2 rounded-full bg-yellow-500"></span>Checking...</span></div>'+
+    '<div class="flex items-center justify-between py-2.5 border-b" style="border-color:rgba(51,65,85,0.1)"><div class="flex items-center gap-2.5"><div class="w-7 h-7 bg-emerald-500/12 rounded-lg flex items-center justify-center"><i class="fas fa-database text-emerald-400 text-[10px]"></i></div><span class="text-dark-300 text-xs">Knowledge Base</span></div><span class="flex items-center gap-1.5 text-xs"><span class="w-2 h-2 rounded-full bg-emerald-500" style="box-shadow:0 0 8px rgba(34,197,94,0.5)"></span><span class="text-emerald-400">Active (2000+ entities)</span></span></div>'+
+    '<div class="flex items-center justify-between py-2.5"><div class="flex items-center gap-2.5"><div class="w-7 h-7 bg-amber-500/12 rounded-lg flex items-center justify-center"><i class="fas fa-cubes text-amber-400 text-[10px]"></i></div><span class="text-dark-300 text-xs">Pipeline</span></div><span class="flex items-center gap-1.5 text-xs"><span class="w-2 h-2 rounded-full bg-emerald-500" style="box-shadow:0 0 8px rgba(34,197,94,0.5)"></span><span class="text-emerald-400">KB → Groq → Phi-3</span></span></div></div></div>'+
+    '<div class="glass-card rounded-2xl p-5"><h3 class="text-sm font-bold text-white mb-4 flex items-center gap-2"><i class="fas fa-server text-indigo-400"></i>Infrastructure</h3><div class="space-y-3">'+
+    '<div class="flex items-center justify-between py-2.5 border-b" style="border-color:rgba(51,65,85,0.1)"><div class="flex items-center gap-2.5"><div class="w-7 h-7 bg-indigo-500/12 rounded-lg flex items-center justify-center"><i class="fas fa-flask text-indigo-400 text-[10px]"></i></div><span class="text-dark-300 text-xs">Framework</span></div><span class="text-white text-xs font-medium">Flask 3.0</span></div>'+
+    '<div class="flex items-center justify-between py-2.5 border-b" style="border-color:rgba(51,65,85,0.1)"><div class="flex items-center gap-2.5"><div class="w-7 h-7 bg-indigo-500/12 rounded-lg flex items-center justify-center"><i class="fab fa-python text-indigo-400 text-[10px]"></i></div><span class="text-dark-300 text-xs">Python</span></div><span class="text-white text-xs font-medium">3.14</span></div>'+
+    '<div class="flex items-center justify-between py-2.5 border-b" style="border-color:rgba(51,65,85,0.1)"><div class="flex items-center gap-2.5"><div class="w-7 h-7 bg-indigo-500/12 rounded-lg flex items-center justify-center"><i class="fas fa-database text-indigo-400 text-[10px]"></i></div><span class="text-dark-300 text-xs">Database</span></div><span id="sDb" class="flex items-center gap-1.5 text-xs"><span class="w-2 h-2 rounded-full bg-yellow-500"></span>Checking...</span></div>'+
+    '<div class="flex items-center justify-between py-2.5"><div class="flex items-center gap-2.5"><div class="w-7 h-7 bg-indigo-500/12 rounded-lg flex items-center justify-center"><i class="fas fa-cloud text-indigo-400 text-[10px]"></i></div><span class="text-dark-300 text-xs">API</span></div><span id="sApi" class="flex items-center gap-1.5 text-xs"><span class="w-2 h-2 rounded-full bg-yellow-500"></span>Checking...</span></div></div></div></div>'+
+    '<div class="grid md:grid-cols-4 gap-3">'+
+    '<div class="glass-card rounded-2xl p-4 text-center"><p class="text-dark-500 text-[10px] uppercase tracking-wider mb-1">Uptime</p><p class="text-lg font-extrabold gradient-text" id="sUptime">0s</p></div>'+
+    '<div class="glass-card rounded-2xl p-4 text-center"><p class="text-dark-500 text-[10px] uppercase tracking-wider mb-1">Predictions</p><p class="text-lg font-extrabold text-white" id="sPred">—</p></div>'+
+    '<div class="glass-card rounded-2xl p-4 text-center"><p class="text-dark-500 text-[10px] uppercase tracking-wider mb-1">Users</p><p class="text-lg font-extrabold text-white" id="sUsers">—</p></div>'+
+    '<div class="glass-card rounded-2xl p-4 text-center"><p class="text-dark-500 text-[10px] uppercase tracking-wider mb-1">Status</p><p class="text-lg font-extrabold" id="sStatus" style="color:#22c55e">Healthy</p></div></div>';
+  document.getElementById('tab-system').innerHTML=h;
+
+  apiGet('/api/health').then(function(r){return r.json()}).then(function(){document.getElementById('sGroq').innerHTML='<span class="w-2 h-2 rounded-full bg-emerald-500" style="box-shadow:0 0 8px rgba(34,197,94,0.5);animation:pulse 2s infinite"></span><span class="text-emerald-400">Connected</span>'}).catch(function(){document.getElementById('sGroq').innerHTML='<span class="w-2 h-2 rounded-full bg-red-500"></span><span class="text-red-400">Offline</span>'});
+  apiGet('/api/ollama/status').then(function(r){return r.json()}).then(function(s){document.getElementById('sOllama').innerHTML=s.running?'<span class="w-2 h-2 rounded-full bg-emerald-500" style="box-shadow:0 0 8px rgba(34,197,94,0.5)"></span><span class="text-emerald-400">Running</span>':'<span class="w-2 h-2 rounded-full bg-red-500"></span><span class="text-red-400">Offline</span>'}).catch(function(){document.getElementById('sOllama').innerHTML='<span class="w-2 h-2 rounded-full bg-red-500"></span><span class="text-red-400">Not reachable</span>'});
+  apiGet('/api/admin/dashboard').then(function(r){return r.json()}).then(function(d){
+    document.getElementById('sDb').innerHTML='<span class="w-2 h-2 rounded-full bg-emerald-500" style="box-shadow:0 0 8px rgba(34,197,94,0.5)"></span><span class="text-emerald-400">Connected</span>';
+    document.getElementById('sApi').innerHTML='<span class="w-2 h-2 rounded-full bg-emerald-500" style="box-shadow:0 0 8px rgba(34,197,94,0.5)"></span><span class="text-emerald-400">Healthy</span>';
+    document.getElementById('sPred').textContent=d.total_predictions||0;document.getElementById('sUsers').textContent=d.total_users||0;
+    function up(){var u=Math.floor((Date.now()-start)/1000);document.getElementById('sUptime').textContent=Math.floor(u/3600)+'h '+Math.floor((u%3600)/60)+'m '+(u%60)+'s'}
+    up();setInterval(up,1000)}).catch(function(){document.getElementById('sDb').innerHTML='<span class="w-2 h-2 rounded-full bg-red-500"></span><span class="text-red-400">Error</span>'})
+}
+
+function ldLogs(){
+  apiGet('/api/admin/logs?page='+lPage+'&per_page=15').then(function(r){return r.json()}).then(function(d){
+    var logs=d.logs||[];
+    var h='<div class="glass-card rounded-2xl p-5"><div class="flex items-center justify-between mb-4"><h3 class="text-sm font-bold text-white flex items-center gap-2"><i class="fas fa-clipboard-list text-indigo-400"></i>Audit Trail <span class="text-dark-500 text-[10px] font-normal">('+d.total+' entries)</span></h3></div>';
+    if(logs.length){
+      h+='<div class="space-y-1.5">';
+      logs.forEach(function(l){
+        var ic='fa-pen-to-square text-indigo-400';
+        var a=(l.action||'').toLowerCase();
+        if(a.includes('deactivat'))ic='fa-user-times text-red-400';
+        else if(a.includes('activat'))ic='fa-user-check text-emerald-400';
+        else if(a.includes('creat'))ic='fa-user-plus text-emerald-400';
+        else if(a.includes('delet'))ic='fa-trash-can text-red-400';
+        else if(a.includes('updat'))ic='fa-pen text-blue-400';
+        else if(a.includes('clear'))ic='fa-eraser text-amber-400';
+        h+='<div class="glass rounded-xl p-3 flex items-start gap-2.5" style="border:1px solid rgba(51,65,85,0.15)"><div class="w-7 h-7 bg-dark-800/60 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas '+ic+' text-[10px]"></i></div>'+
+          '<div class="flex-1 min-w-0"><p class="text-dark-200 text-xs">'+(l.action||'')+'</p>'+
+          '<div class="flex items-center gap-2.5 mt-1 flex-wrap"><span class="text-dark-500 text-[10px]">'+(l.admin_name||'Admin')+'</span>'+
+          (l.ip_address?'<span class="text-dark-600 text-[10px]">IP: '+l.ip_address+'</span>':'')+
+          '<span class="text-dark-600 text-[10px]">'+fmtDate(l.created_at)+'</span></div>'+
+          (l.details?'<p class="text-dark-500 text-[10px] mt-0.5">'+l.details+'</p>':'')+'</div></div>'});
+      h+='</div>'}else{h+='<p class="text-dark-500 text-center py-8 text-sm">No admin logs yet.</p>'}
+    if(d.pages>1){
+      h+='<div class="flex items-center justify-center gap-1 mt-4">';
+      h+='<button onclick="lPg('+(lPage-1)+')" class="pg-btn '+(lPage<=1?'opacity-30 pointer-events-none text-dark-600':'glass text-dark-400')+'"><i class="fas fa-chevron-left text-[10px]"></i></button>';
+      for(var i=1;i<=d.pages;i++){h+='<button onclick="lPg('+i+')" class="pg-btn '+(i===lPage?'bg-indigo-500/20 text-indigo-400 border-indigo-500/30':'glass text-dark-400')+'">'+i+'</button>'}
+      h+='<button onclick="lPg('+(lPage+1)+')" class="pg-btn '+(lPage>=d.pages?'opacity-30 pointer-events-none text-dark-600':'glass text-dark-400')+'"><i class="fas fa-chevron-right text-[10px]"></i></button></div>'}
+    h+='</div>';document.getElementById('tab-logs').innerHTML=h;
+  }).catch(function(){document.getElementById('tab-logs').innerHTML='<div class="glass-card rounded-2xl p-8 text-center" style="border-color:rgba(239,68,68,0.2)"><i class="fas fa-exclamation-triangle text-3xl text-red-400 mb-2"></i><p class="text-red-400 text-sm">Failed to load logs.</p></div>'})
+}
+function lPg(p){lPage=p;ldLogs()}
+
+function ldSettings(){
+  var h='<div class="grid md:grid-cols-2 gap-4">'+
+    '<div class="glass-card rounded-2xl p-5"><h3 class="text-sm font-bold text-white mb-4 flex items-center gap-2"><i class="fas fa-sliders text-indigo-400"></i>Detection Config</h3><div class="space-y-3">'+
+    '<div class="flex justify-between items-center py-2.5 border-b" style="border-color:rgba(51,65,85,0.1)"><span class="text-dark-300 text-xs">Default Engine</span><span class="text-indigo-400 text-xs font-medium">KB → Groq → Phi-3</span></div>'+
+    '<div class="flex justify-between items-center py-2.5 border-b" style="border-color:rgba(51,65,85,0.1)"><span class="text-dark-300 text-xs">Groq Model</span><span class="text-white text-xs font-medium">llama-3.3-70b-versatile</span></div>'+
+    '<div class="flex justify-between items-center py-2.5 border-b" style="border-color:rgba(51,65,85,0.1)"><span class="text-dark-300 text-xs">Confidence Threshold</span><span class="text-white text-xs font-medium">75%</span></div>'+
+    '<div class="flex justify-between items-center py-2.5"><span class="text-dark-300 text-xs">Phi-3 Timeout</span><span class="text-white text-xs font-medium">30s</span></div></div></div>'+
+    '<div class="glass-card rounded-2xl p-5"><h3 class="text-sm font-bold text-white mb-4 flex items-center gap-2"><i class="fas fa-cog text-indigo-400"></i>System Config</h3><div class="space-y-3">'+
+    '<div class="flex justify-between items-center py-2.5 border-b" style="border-color:rgba(51,65,85,0.1)"><span class="text-dark-300 text-xs">Database</span><span class="text-white text-xs font-medium">SQLite</span></div>'+
+    '<div class="flex justify-between items-center py-2.5 border-b" style="border-color:rgba(51,65,85,0.1)"><span class="text-dark-300 text-xs">Session</span><span class="text-white text-xs font-medium">Filesystem</span></div>'+
+    '<div class="flex justify-between items-center py-2.5 border-b" style="border-color:rgba(51,65,85,0.1)"><span class="text-dark-300 text-xs">Max Upload</span><span class="text-white text-xs font-medium">16 MB</span></div>'+
+    '<div class="flex justify-between items-center py-2.5"><span class="text-dark-300 text-xs">JWT Expiry</span><span class="text-white text-xs font-medium">24 hours</span></div></div></div></div>'+
+    '<div class="glass-card rounded-2xl p-5 mt-4">'+
+    '<div class="flex items-center justify-between"><div><h3 class="text-sm font-bold text-white flex items-center gap-2"><i class="fas fa-database text-indigo-400"></i>Data Management</h3><p class="text-dark-500 text-[10px] mt-1">Manage prediction history and analytics data.</p></div>'+
+    '<div class="flex gap-2"><button onclick="clearHist()" class="px-3 py-2 bg-red-500/10 text-red-400 text-xs rounded-xl border border-red-500/15 hover:bg-red-500/20 transition-all font-medium"><i class="fas fa-trash-can mr-1"></i>Clear History</button>'+
+    '<button onclick="toast(\'Analytics reset — coming soon\',\'err\')" class="px-3 py-2 bg-amber-500/10 text-amber-400 text-xs rounded-xl border border-amber-500/15 hover:bg-amber-500/20 transition-all font-medium"><i class="fas fa-rotate mr-1"></i>Reset Stats</button></div></div></div>';
+  document.getElementById('tab-settings').innerHTML=h;
+}
+
+function ldReports(){
+  var h='<div class="glass-card rounded-2xl p-5 mb-4"><h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2"><i class="fas fa-file-export text-indigo-400"></i>Export Data</h3><p class="text-dark-400 text-xs mb-5">Download system data in CSV format for external analysis.</p>'+
+    '<div class="grid sm:grid-cols-3 gap-3">'+
+    '<button onclick="expCSV(\'history\')" class="glass-card rounded-2xl p-5 text-center hover:border-indigo-500/30 transition-all cursor-pointer"><div class="w-10 h-10 bg-indigo-500/12 rounded-xl flex items-center justify-center mx-auto mb-3"><i class="fas fa-clock-rotate text-indigo-400 text-sm"></i></div><h4 class="text-xs font-bold text-white mb-1">History</h4><p class="text-dark-500 text-[10px]">All prediction records</p></button>'+
+    '<button onclick="expCSV(\'users\')" class="glass-card rounded-2xl p-5 text-center hover:border-indigo-500/30 transition-all cursor-pointer"><div class="w-10 h-10 bg-emerald-500/12 rounded-xl flex items-center justify-center mx-auto mb-3"><i class="fas fa-users text-emerald-400 text-sm"></i></div><h4 class="text-xs font-bold text-white mb-1">Users</h4><p class="text-dark-500 text-[10px]">Registered user data</p></button>'+
+    '<button onclick="expCSV(\'logs\')" class="glass-card rounded-2xl p-5 text-center hover:border-indigo-500/30 transition-all cursor-pointer"><div class="w-10 h-10 bg-amber-500/12 rounded-xl flex items-center justify-center mx-auto mb-3"><i class="fas fa-clipboard-list text-amber-400 text-sm"></i></div><h4 class="text-xs font-bold text-white mb-1">Admin Logs</h4><p class="text-dark-500 text-[10px]">Audit trail entries</p></button></div></div>'+
+    '<div class="glass-card rounded-2xl p-5"><h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2"><i class="fas fa-chart-simple text-indigo-400"></i>Quick Stats Summary</h3><div id="repStats"><p class="text-dark-500 text-sm text-center py-4"><i class="fas fa-spinner fa-spin mr-2"></i>Loading...</p></div></div>';
+  document.getElementById('tab-reports').innerHTML=h;
+  apiGet('/api/admin/dashboard').then(function(r){return r.json()}).then(function(d){
+    var h2='<div class="grid grid-cols-2 sm:grid-cols-4 gap-3">'+
+      '<div class="text-center p-3 rounded-xl" style="background:rgba(59,130,246,0.08)"><p class="text-blue-400 text-lg font-extrabold">'+d.total_users+'</p><p class="text-dark-500 text-[10px]">Users</p></div>'+
+      '<div class="text-center p-3 rounded-xl" style="background:rgba(34,197,94,0.08)"><p class="text-emerald-400 text-lg font-extrabold">'+d.total_predictions+'</p><p class="text-dark-500 text-[10px]">Predictions</p></div>'+
+      '<div class="text-center p-3 rounded-xl" style="background:rgba(239,68,68,0.08)"><p class="text-red-400 text-lg font-extrabold">'+d.fake_count+'</p><p class="text-dark-500 text-[10px]">Fake</p></div>'+
+      '<div class="text-center p-3 rounded-xl" style="background:rgba(99,102,241,0.08)"><p class="text-indigo-400 text-lg font-extrabold">'+d.real_count+'</p><p class="text-dark-500 text-[10px]">Real</p></div></div>';
+    document.getElementById('repStats').innerHTML=h2});
+}
+function expCSV(type){
+  toast('Generating '+type+' export...','suc');
+  if(type==='history'){
+    apiGet('/api/admin/history?page=1&per_page=10000').then(function(r){return r.json()}).then(function(d){
+      var rows=[['ID','Text','Prediction','Confidence','Method','Date']];
+      (d.history||[]).forEach(function(r){rows.push([r.id,'"'+((r.news_text||'').replace(/"/g,'""'))+'"',r.prediction,r.confidence,r.method||'',r.created_at||''])});
+      dlCSV('history_export.csv',rows)})}
+  else if(type==='users'){
+    apiGet('/api/admin/users?page=1&per_page=10000').then(function(r){return r.json()}).then(function(d){
+      var rows=[['ID','Username','Full Name','Email','Admin','Active','Created']];
+      (d.users||[]).forEach(function(u){rows.push([u.id,u.username,u.full_name||'',u.email,u.is_admin?'Yes':'No',u.is_active?'Yes':'No',u.created_at||''])});
+      dlCSV('users_export.csv',rows)})}
+  else if(type==='logs'){
+    apiGet('/api/admin/logs?page=1&per_page=10000').then(function(r){return r.json()}).then(function(d){
+      var rows=[['ID','Admin','Action','Details','IP','Date']];
+      (d.logs||[]).forEach(function(l){rows.push([l.id,l.admin_name||'','"'+((l.action||'').replace(/"/g,'""'))+'"','"'+((l.details||'').replace(/"/g,'""'))+'"',l.ip_address||'',l.created_at||''])});
+      dlCSV('admin_logs_export.csv',rows)})}
+}
+function dlCSV(fn,rows){
+  var csv=rows.map(function(r){return r.join(',')}).join('\n');
+  var BOM='\uFEFF';var blob=new Blob([BOM+csv],{type:'text/csv;charset=utf-8;'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fn;a.click();URL.revokeObjectURL(a.href);
+  toast(fn+' downloaded','suc')}
+
+function fmtDate(iso){if(!iso)return'-';try{var d=new Date(iso);var n=new Date();var df=Math.floor((n-d)/1000);if(df<60)return'Just now';if(df<3600)return Math.floor(df/60)+'m ago';if(df<86400)return Math.floor(df/3600)+'h ago';if(df<604800)return Math.floor(df/86400)+'d ago';return d.toLocaleDateString()}catch(e){return iso}}
+
+if (IS_ADMIN) ldDash();
+</script>
+</body>
+</html>

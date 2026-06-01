@@ -1,0 +1,595 @@
+{% extends "base.html" %}
+{% block title %}Detect News | AI Fake News Detector{% endblock %}
+{% block content %}
+<style>
+@keyframes border-glow { 0%,100%{border-color:rgba(99,102,241,0.3);box-shadow:0 0 20px rgba(99,102,241,0.1)} 50%{border-color:rgba(99,102,241,0.6);box-shadow:0 0 40px rgba(99,102,241,0.2)} }
+@keyframes scan-down { 0%{top:-2px} 100%{top:100%} }
+@keyframes float-particle { 0%,100%{transform:translateY(0)translateX(0)} 25%{transform:translateY(-20px)translateX(10px)} 50%{transform:translateY(-10px)translateX(-5px)} 75%{transform:translateY(-25px)translateX(8px)} }
+@keyframes conf-fill { from{stroke-dashoffset:251.2} }
+@keyframes glow-pulse { 0%,100%{box-shadow:0 0 10px rgba(99,102,241,0.1)} 50%{box-shadow:0 0 25px rgba(99,102,241,0.2)} }
+@keyframes step-glow { 0%,100%{box-shadow:0 0 5px rgba(99,102,241,0.2)} 50%{box-shadow:0 0 20px rgba(99,102,241,0.5)} }
+.particle{position:absolute;width:3px;height:3px;border-radius:50%;animation:float-particle 10s ease-in-out infinite}
+.drop-zone{border:2px dashed rgba(71,85,105,0.5);border-radius:1rem;transition:all 0.4s;cursor:pointer;position:relative;overflow:hidden}
+.drop-zone:hover{border-color:rgba(20,184,166,0.4);background:rgba(20,184,166,0.03)}
+.drop-zone.active{border-color:rgba(20,184,166,0.6);background:rgba(20,184,166,0.06);animation:border-glow 2s ease-in-out infinite}
+.scan-line{position:absolute;left:10%;right:10%;height:2px;background:linear-gradient(90deg,transparent,rgba(20,184,166,0.8),transparent);animation:scan-down 1.5s linear infinite}
+.glow-card{position:relative;overflow:hidden;border-radius:1rem;transition:all 0.4s}
+.step-indicator{display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;border-radius:0.75rem;transition:all 0.4s;font-size:0.75rem}
+.step-indicator .dot{width:10px;height:10px;border-radius:50%;transition:all 0.3s}
+.step-indicator.pending{color:#64748b}
+.step-indicator.pending .dot{background:#334155}
+.step-indicator.active{color:#818cf8;background:rgba(99,102,241,0.08);animation:step-glow 1.5s ease-in-out infinite}
+.step-indicator.active .dot{background:#818cf8;box-shadow:0 0 10px rgba(99,102,241,0.5)}
+.step-indicator.done{color:#34d399}
+.step-indicator.done .dot{background:#34d399}
+.loading-dots::after{content:'';animation:dots 1.5s steps(4,end) infinite}
+@keyframes dots{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}100%{content:''}}
+</style>
+
+<div class="pt-20 pb-12 relative min-h-screen">
+  <div class="absolute inset-0 pointer-events-none overflow-hidden">
+    <div class="absolute top-32 left-16 w-96 h-96 bg-primary-500/8 rounded-full blur-3xl"></div>
+    <div class="absolute bottom-32 right-16 w-96 h-96 bg-accent-500/8 rounded-full blur-3xl"></div>
+    {% for i in range(6) %}
+    <div class="particle" style="top:{{ 15 + (i * 14) }}%;left:{{ 8 + (i * 13) }}%;animation-delay:{{ i * 0.7 }}s;background:{{ 'rgba(99,102,241,0.2)' if i % 2 == 0 else 'rgba(20,184,166,0.2)' }}"></div>
+    {% endfor %}
+  </div>
+
+  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <!-- HEADER -->
+    <div class="text-center mb-10 animate-fade-in">
+      <div class="inline-flex items-center px-4 py-2 glass rounded-full mb-4 border border-primary-500/20">
+        <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse mr-2"></span>
+        <span class="text-dark-300 text-xs font-medium">AI-Powered News Verification</span>
+      </div>
+      <h1 class="text-4xl sm:text-5xl font-extrabold text-white mb-3">
+        Detect <span class="gradient-text">Fake News</span>
+      </h1>
+      <p class="text-dark-400 text-lg max-w-2xl mx-auto">Enter a headline or article. Knowledge checks, Groq AI, and Phi-3 fallback produce one connected verdict.</p>
+    </div>
+
+    <!-- TWO COLUMNS -->
+    <div class="grid lg:grid-cols-2 gap-8">
+      <!-- ===== TEXT ANALYSIS ===== -->
+      <div class="animate-fade-in" style="animation-delay:0.1s">
+        <div class="glow-card glass" style="border:1px solid rgba(99,102,241,0.2);background:rgba(30,41,59,0.45)">
+          <div class="absolute top-0 right-0 w-48 h-48 bg-primary-500/8 rounded-full blur-3xl pointer-events-none"></div>
+          <div class="absolute bottom-0 left-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl pointer-events-none"></div>
+          <div class="relative p-6 md:p-8">
+            <div class="flex items-center gap-4 mb-6">
+              <div class="w-14 h-14 bg-gradient-to-br from-primary-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-xl shadow-primary-500/25">
+                <i class="fas fa-font text-white text-xl"></i>
+              </div>
+              <div>
+                <h2 class="text-2xl font-bold text-white">Text Analysis</h2>
+                <p class="text-dark-400 text-sm">Enter news content to verify</p>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 mb-5">
+              <span class="text-dark-500 text-xs font-medium uppercase tracking-wider">Try:</span>
+              <button onclick="loadSample('s1')" class="px-3 py-1.5 bg-dark-700/40 rounded-full border border-dark-600/30 text-dark-400 text-xs hover:text-white hover:border-primary-500/40 transition-all">
+                <i class="fas fa-bolt text-yellow-500/60 mr-1"></i>Breaking
+              </button>
+              <button onclick="loadSample('s2')" class="px-3 py-1.5 bg-dark-700/40 rounded-full border border-dark-600/30 text-dark-400 text-xs hover:text-white hover:border-primary-500/40 transition-all">
+                <i class="fas fa-flask text-blue-500/60 mr-1"></i>Scientific
+              </button>
+              <button onclick="loadSample('s3')" class="px-3 py-1.5 bg-dark-700/40 rounded-full border border-dark-600/30 text-dark-400 text-xs hover:text-white hover:border-primary-500/40 transition-all">
+                <i class="fas fa-skull text-red-500/60 mr-1"></i>Clickbait
+              </button>
+            </div>
+
+            <div class="relative mb-3">
+              <textarea id="news-text" rows="8" class="w-full px-4 py-3.5 bg-dark-800/60 border border-dark-600/40 rounded-xl text-white text-sm font-mono placeholder-dark-500 resize-none transition-all focus:border-primary-500/50 focus:shadow-[0_0_0_2px_rgba(99,102,241,0.08)]" placeholder="Paste a news article, headline, or statement to analyze..." style="min-height:190px"></textarea>
+              <div class="absolute bottom-3 right-3 flex gap-1.5 opacity-0 focus-within:opacity-100 transition-opacity">
+                <button onclick="cInput()" class="w-7 h-7 bg-dark-700/70 rounded-lg flex items-center justify-center text-dark-400 hover:text-white transition-all" title="Clear"><i class="fas fa-eraser text-xs"></i></button>
+              </div>
+            </div>
+
+            <div class="relative mb-4">
+              <i class="fas fa-link absolute left-3.5 top-1/2 -translate-y-1/2 text-dark-400 text-sm"></i>
+              <input type="text" id="source-url" placeholder="Source URL (optional)" class="w-full pl-10 pr-4 py-2.5 bg-dark-800/60 border border-dark-600/40 rounded-xl text-white text-sm placeholder-dark-500 transition-all focus:border-primary-500/50" />
+            </div>
+
+            <div class="flex items-center justify-between flex-wrap gap-3">
+              <div class="flex items-center gap-3">
+                <span class="text-dark-500 text-xs bg-dark-700/40 px-2.5 py-1 rounded-full border border-dark-600/20" id="char-count">0 chars</span>
+                <span class="text-dark-600 text-xs">|</span>
+                <span class="text-dark-500 text-xs bg-dark-700/40 px-2.5 py-1 rounded-full border border-dark-600/20" id="word-count">0 words</span>
+                <span class="text-dark-600 text-xs hidden sm:inline ml-1"><kbd class="px-1.5 py-0.5 bg-dark-700/60 rounded text-dark-400 text-xs border border-dark-600/30">Ctrl</kbd>+<kbd class="px-1.5 py-0.5 bg-dark-700/60 rounded text-dark-400 text-xs border border-dark-600/30">Enter</kbd></span>
+              </div>
+              <button onclick="analyzeText()" id="analyze-btn" class="btn-primary text-base px-8 py-3.5 shadow-xl shadow-primary-500/25">
+                <i class="fas fa-shield mr-2"></i> Analyze Text
+              </button>
+            </div>
+          </div>
+        </div>
+        <div id="text-result" class="mt-6 hidden"></div>
+      </div>
+
+      <!-- ===== IMAGE ANALYSIS ===== -->
+      <div class="animate-fade-in" style="animation-delay:0.2s">
+        <div class="glow-card glass" style="border:1px solid rgba(20,184,166,0.2);background:rgba(30,41,59,0.45)">
+          <div class="absolute top-0 left-0 w-48 h-48 bg-accent-500/8 rounded-full blur-3xl pointer-events-none"></div>
+          <div class="absolute bottom-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none"></div>
+          <div class="relative p-6 md:p-8">
+            <div class="flex items-center gap-4 mb-6">
+              <div class="w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center shadow-xl shadow-emerald-500/25">
+                <i class="fas fa-image text-white text-xl"></i>
+              </div>
+              <div>
+                <h2 class="text-2xl font-bold text-white">Image Analysis</h2>
+                <p class="text-dark-400 text-sm">Upload news screenshot for OCR extraction</p>
+              </div>
+            </div>
+
+            <div id="drop-zone" class="drop-zone p-10 text-center mb-4" onclick="document.getElementById('img-input').click()">
+              <div class="scan-line" id="scan-line" style="display:none"></div>
+              <input type="file" id="img-input" accept="image/*" class="hidden" onchange="handleImg(this)" />
+              <div id="upload-placeholder">
+                <div class="w-24 h-24 mx-auto mb-5 bg-gradient-to-br from-accent-500/15 to-emerald-500/15 rounded-3xl flex items-center justify-center border border-accent-500/20 animate-float">
+                  <i class="fas fa-cloud-arrow-up text-accent-400 text-4xl"></i>
+                </div>
+                <p class="text-white font-semibold text-lg mb-1">Drop image here or click to browse</p>
+                <p class="text-dark-500 text-sm">Supports PNG, JPG, JPEG, WEBP</p>
+                <div class="mt-4 flex items-center justify-center gap-2">
+                  <span class="w-1.5 h-1.5 bg-accent-500/50 rounded-full"></span>
+                  <span class="text-dark-600 text-xs">Text extracted via OCR</span>
+                  <span class="w-1.5 h-1.5 bg-accent-500/50 rounded-full"></span>
+                </div>
+              </div>
+              <div id="image-preview" class="hidden relative">
+                <img id="preview-img" class="max-h-72 mx-auto rounded-xl object-contain shadow-xl" alt="Uploaded image" />
+                <button onclick="removeImg(event)" class="absolute top-3 right-3 w-9 h-9 bg-red-500/80 backdrop-blur rounded-full flex items-center justify-center text-white hover:bg-red-500 transition-all shadow-lg"><i class="fas fa-xmark"></i></button>
+              </div>
+            </div>
+
+            <div id="ocr-status" class="hidden mb-4">
+              <div class="glass rounded-xl p-4 flex items-center gap-4 border border-accent-500/20">
+                <div class="spinner" style="width:1.5rem;height:1.5rem;border-width:3px;border-top-color:#14b8a6"></div>
+                <div class="flex-1">
+                  <p class="text-white text-sm font-medium" id="ocr-status-text">Extracting text...</p>
+                  <div class="mt-2 w-full h-1.5 bg-dark-700 rounded-full overflow-hidden">
+                    <div id="ocr-bar" class="h-full bg-gradient-to-r from-accent-500 to-emerald-500 rounded-full transition-all duration-300" style="width:0%"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div id="extracted-container" class="hidden mb-4">
+              <div class="glass rounded-xl p-4 border border-accent-500/20">
+                <div class="flex items-center justify-between mb-3">
+                  <div class="flex items-center gap-2">
+                    <i class="fas fa-file-lines text-accent-400"></i>
+                    <p class="text-dark-400 text-xs font-medium uppercase tracking-wider">Extracted Text</p>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <button onclick="document.getElementById('img-input').click()" class="text-dark-500 hover:text-accent-400 text-xs transition-all"><i class="fas fa-rotate mr-1"></i>Retry OCR</button>
+                    <span class="text-dark-500 text-xs bg-dark-700/40 px-2 py-0.5 rounded-full" id="ext-chars">0 chars</span>
+                  </div>
+                </div>
+                <div class="glass rounded-lg p-3 mb-3 border border-yellow-500/15" style="background:rgba(234,179,8,0.05)">
+                  <div class="flex items-start gap-2.5">
+                    <i class="fas fa-pen text-yellow-400 text-xs mt-0.5"></i>
+                    <p class="text-dark-400 text-xs leading-relaxed"><strong class="text-yellow-400">Review & correct</strong> the extracted text below before analyzing. OCR may misread characters like <code class="text-dark-300 bg-dark-700/50 px-1 rounded text-[10px]">l</code> vs <code class="text-dark-300 bg-dark-700/50 px-1 rounded text-[10px]">1</code> or <code class="text-dark-300 bg-dark-700/50 px-1 rounded text-[10px]">O</code> vs <code class="text-dark-300 bg-dark-700/50 px-1 rounded text-[10px]">0</code>.</p>
+                  </div>
+                </div>
+                <textarea id="extracted-text" rows="5" class="w-full px-3 py-2.5 bg-dark-800/60 border border-dark-600/40 rounded-xl text-white text-sm font-mono resize-none mb-3 transition-all focus:border-accent-500/50" placeholder="Extracted text appears here — review and fix any OCR errors..." oninput="document.getElementById('ext-chars').textContent=this.value.length+' chars'"></textarea>
+                <button onclick="analyzeImgText()" id="analyze-img-btn" class="w-full py-3 font-semibold rounded-xl text-white transition-all shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-2" style="background:linear-gradient(135deg,#059669,#10b981)">
+                  <i class="fas fa-shield"></i> Analyze Extracted Text
+                </button>
+              </div>
+            </div>
+
+            <div class="glass rounded-xl p-4 border border-yellow-500/15" style="background:rgba(234,179,8,0.04)">
+              <div class="flex items-start gap-3">
+                <div class="w-8 h-8 bg-yellow-500/15 rounded-lg flex items-center justify-center shrink-0">
+                  <i class="fas fa-lightbulb text-yellow-400 text-sm"></i>
+                </div>
+                <div>
+                  <p class="text-dark-300 text-sm font-medium">How to get accurate results</p>
+                  <ul class="text-dark-500 text-xs mt-2 leading-relaxed space-y-1.5">
+                    <li><i class="fas fa-check text-emerald-400 mr-1.5"></i>Crop the image to show <strong class="text-dark-300">only the news text</strong></li>
+                    <li><i class="fas fa-check text-emerald-400 mr-1.5"></i>Use <strong class="text-dark-300">clear, high-contrast</strong> screenshots (black text on white background)</li>
+                    <li><i class="fas fa-check text-emerald-400 mr-1.5"></i><strong class="text-dark-300">Review & edit</strong> the extracted text below before clicking Analyze</li>
+                    <li><i class="fas fa-keyboard text-dark-400 mr-1.5"></i>You can also <strong class="text-dark-300">paste text directly</strong> in the Text Analysis tab</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="img-result" class="mt-6 hidden"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script>
+// ===== COUNTERS =====
+var ta = document.getElementById('news-text');
+ta.addEventListener('input', function(){
+  var t = this.value;
+  document.getElementById('char-count').textContent = t.length + ' chars';
+  document.getElementById('word-count').textContent = (t.trim() ? t.trim().split(/\s+/).length : 0) + ' words';
+});
+ta.addEventListener('keydown', function(e){
+  if(e.ctrlKey && e.key === 'Enter'){ e.preventDefault(); analyzeText(); }
+});
+
+// ===== SAMPLES =====
+var SAMPLES = {
+  s1: 'BREAKING: Scientists at CERN have discovered a parallel universe where time runs backwards. The discovery was made during routine maintenance of the Large Hadron Collider when researchers accidentally opened a portal to an alternate dimension.',
+  s2: 'Researchers at Stanford University published a study in Nature Medicine showing that a new AI-powered diagnostic tool can detect early-stage lung cancer with 94% accuracy from routine blood tests.',
+  s3: 'YOU WON\'T BELIEVE what this mom found in her backyard! SHOCKING video goes viral! Doctors HATE this one simple trick that will change your life forever! Share this with 10 friends!'
+};
+function loadSample(k){ ta.value=SAMPLES[k]; ta.dispatchEvent(new Event('input')); ta.focus(); }
+function cInput(){ ta.value=''; document.getElementById('source-url').value=''; document.getElementById('text-result').classList.add('hidden'); ta.dispatchEvent(new Event('input')); }
+
+// ===== PROGRESS ANIMATION =====
+function getLoadingHTML(msg){
+  return '<div class="glass rounded-2xl p-6 border border-primary-500/20 animate-fade-in">'+
+    '<p class="text-dark-400 text-sm text-center mb-5 font-medium">'+msg+'</p>'+
+    '<div class="max-w-md mx-auto space-y-2" id="psteps">'+
+      '<div class="step-indicator pending" id="ps1"><span class="dot"></span><span>Preprocessing text...</span></div>'+
+      '<div class="step-indicator pending" id="ps2"><span class="dot"></span><span>Checking trusted sources...</span></div>'+
+      '<div class="step-indicator pending" id="ps3"><span class="dot"></span><span>Running AI inference...</span></div>'+
+      '<div class="step-indicator pending" id="ps4"><span class="dot"></span><span>Compiling results...</span></div>'+
+    '</div>'+
+    '<div class="mt-4 flex items-center justify-center gap-2">'+
+      '<div class="spinner" style="width:1.25rem;height:1.25rem;border-width:2px"></div>'+
+      '<span class="text-dark-500 text-xs" id="pstatus">Starting analysis...</span>'+
+    '</div></div>';
+}
+function runSteps(){
+  setTimeout(function(){ $('#ps1').className='step-indicator active'; $('#pstatus').textContent='Preprocessing...'; },200);
+  setTimeout(function(){ $('#ps1').className='step-indicator done'; $('#ps2').className='step-indicator active'; $('#pstatus').textContent='Checking trusted sources...'; },700);
+  setTimeout(function(){ $('#ps2').className='step-indicator done'; $('#ps3').className='step-indicator active'; $('#pstatus').textContent='Running AI via Groq/Phi-3...'; },1500);
+  setTimeout(function(){ $('#ps3').className='step-indicator done'; $('#ps4').className='step-indicator active'; $('#pstatus').textContent='Compiling results...'; },3000);
+  setTimeout(function(){ $('#ps4').className='step-indicator done'; $('#pstatus').textContent='Done!'; },4500);
+}
+function $(id){ return document.getElementById(id); }
+function esc(v){
+  return String(v == null ? '' : v).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+function formatExplanation(v){
+  return esc(v || 'Analysis complete.').replace(/\n{2,}/g, '</p><p class="text-dark-200 text-sm leading-relaxed pl-3 mt-3">').replace(/\n/g, '<br>');
+}
+
+// ===== TEXT ANALYSIS =====
+function analyzeText(){
+  var text = ta.value.trim();
+  if(!text){ showToast('Please enter news text to analyze','error'); return; }
+  if(text.length<5){ showToast('Enter at least 5 characters','error'); return; }
+
+  var btn = $('analyze-btn');
+  btn.disabled=true; btn.innerHTML='<div class="spinner"></div> Analyzing...';
+
+  var resultDiv = $('text-result');
+  resultDiv.innerHTML = getLoadingHTML('Analyzing your news content');
+  resultDiv.classList.remove('hidden');
+  runSteps();
+
+  var data = {text: text, source_type: 'text'};
+  var su = $('source-url').value.trim();
+  if(su) data.source_url = su;
+
+  // Simple fetch — no dependency on api.js
+  var token = window.AUTH_TOKEN || '';
+  fetch('/api/predict/', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+    credentials:'same-origin',
+    body:JSON.stringify(data)
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(res){
+    if(res.error){
+      resultDiv.innerHTML = '<div class="glass rounded-2xl p-8 border-2 border-red-500/25 text-center animate-fade-in">'+
+        '<i class="fas fa-exclamation-triangle text-5xl text-red-400 mb-4"></i>'+
+        '<p class="text-red-400 font-medium text-lg">'+res.error+'</p></div>';
+      showToast(res.error,'error'); return;
+    }
+    showResult(resultDiv, res);
+  })
+  .catch(function(err){
+    resultDiv.innerHTML = '<div class="glass rounded-2xl p-8 border-2 border-red-500/25 text-center animate-fade-in">'+
+      '<i class="fas fa-exclamation-triangle text-5xl text-red-400 mb-4"></i>'+
+      '<p class="text-red-400 font-medium text-lg">Analysis failed</p>'+
+      '<p class="text-dark-500 text-sm mt-2">Network error. Is the server running?</p></div>';
+    showToast('Analysis failed. Check server.','error');
+  })
+  .finally(function(){
+    btn.disabled=false; btn.innerHTML='<i class="fas fa-shield mr-2"></i> Analyze Text';
+  });
+}
+
+function showResult(container, r){
+  var isReal = r.prediction === 'REAL';
+  var col = isReal ? 'emerald' : 'red';
+  var badge = isReal ? 'badge-real' : 'badge-fake';
+  var icon = isReal ? 'fa-check-circle' : 'fa-times-circle';
+  var confColor = isReal ? '#34d399' : '#f87171';
+  var verdictTitle = isReal ? 'REAL NEWS' : 'FAKE NEWS';
+  var verdictCopy = isReal ? 'The entered article is supported by the strongest available checks for this exact claim.' : 'The entered article conflicts with the strongest available checks for this exact claim.';
+  var category = r.category || 'General';
+  var modelVerdict = r.model_verdict || 'N/A';
+  var trustedCount = r.trusted_source_count || 0;
+
+  // SVG ring
+  var circ = 251.2;
+  var off = circ - (r.confidence/100)*circ;
+
+  // Sentiment
+  var sBadge = r.sentiment==='Positive'?'bg-emerald-500/12 text-emerald-400 border-emerald-500/15':
+    r.sentiment==='Negative'?'bg-red-500/12 text-red-400 border-red-500/15':'bg-dark-600/25 text-dark-300 border-dark-500/15';
+  var sIcon = r.sentiment==='Positive'?'fa-face-smile':r.sentiment==='Negative'?'fa-face-frown':'fa-face-meh';
+  var sColor = r.sentiment==='Positive'?'text-emerald-400':r.sentiment==='Negative'?'text-red-400':'text-dark-300';
+
+  // Suspicious phrases
+  var suspHtml = '';
+  if(r.suspicious_phrases && r.suspicious_phrases.length){
+    suspHtml = '<div class="mt-4 p-4 glass rounded-xl border border-red-500/15">'+
+      '<p class="text-dark-500 text-xs mb-2 font-medium uppercase tracking-wider"><i class="fas fa-triangle-exclamation text-red-400 mr-1"></i> Suspicious Patterns</p>'+
+      '<div class="flex flex-wrap gap-1.5">'+r.suspicious_phrases.map(function(p){
+        return '<span class="px-2.5 py-1 bg-red-500/12 text-red-400 text-xs rounded-full border border-red-500/15">'+esc(p)+'</span>';
+      }).join('')+'</div></div>';
+  }
+
+  // Keywords
+  var kwHtml = '';
+  if(r.keywords && r.keywords.length){
+    kwHtml = '<div class="mt-4"><p class="text-dark-500 text-xs mb-2 font-medium uppercase tracking-wider"><i class="fas fa-hashtag text-primary-400 mr-1"></i> Keywords</p>'+
+      '<div class="flex flex-wrap gap-2">'+r.keywords.map(function(k){
+        return '<span class="px-3 py-1.5 bg-dark-700/40 text-dark-300 text-sm rounded-lg border border-dark-600/30">'+esc(k)+'</span>';
+      }).join('')+'</div></div>';
+  }
+
+  // Fact checks
+  var fcHtml = '';
+  if(r.fact_checks && r.fact_checks.length){
+    fcHtml = '<div class="mt-4"><p class="text-dark-500 text-xs mb-2 font-medium uppercase tracking-wider"><i class="fas fa-check-double text-primary-400 mr-1"></i> External Fact Checks</p><div class="space-y-2">'+
+      r.fact_checks.map(function(fc){
+        var rc = 'text-yellow-400'; var rl = (fc.rating||'').toLowerCase();
+        if(rl.includes('false')||rl.includes('fake')) rc='text-red-400';
+        else if(rl.includes('true')||rl.includes('correct')||rl.includes('trusted')) rc='text-emerald-400';
+        var claim = esc(fc.claim||'');
+        if(fc.url){ claim = '<a href="'+esc(fc.url)+'" target="_blank" rel="noopener noreferrer" class="hover:text-primary-300 transition-colors">'+claim+'</a>'; }
+        return '<div class="glass rounded-xl p-3 flex items-start gap-3 border '+(fc.trusted?'border-emerald-500/20':'border-dark-600/20')+'">'+
+          '<i class="fas fa-check-double text-primary-400 mt-0.5"></i>'+
+          '<div class="flex-1 min-w-0"><p class="text-dark-200 text-sm truncate">'+claim+'</p>'+
+          '<div class="flex items-center gap-2 mt-1"><span class="'+rc+' text-xs font-medium">'+esc(fc.rating||'Referenced')+'</span>'+
+          (fc.source?'<span class="text-dark-500 text-xs"> via '+esc(fc.source)+'</span>':'')+
+          (fc.published?'<span class="text-dark-600 text-xs">'+esc(fc.published)+'</span>':'')+
+          '</div></div></div>';
+      }).join('')+'</div></div>';
+  }
+
+  var html = '<div class="glass rounded-2xl p-6 md:p-8 border-2 border-'+col+'-500/25 animate-fade-in relative overflow-hidden">'+
+    '<div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-'+col+'-500/8 rounded-full blur-3xl pointer-events-none"></div>'+
+    '<div class="relative">'+
+    // Top bar
+    '<div class="flex items-start justify-between gap-4 mb-6 flex-wrap">'+
+      '<div class="flex items-center gap-3 flex-wrap">'+
+        '<span class="'+badge+' text-lg px-5 py-1.5"><i class="fas '+icon+' mr-1.5"></i> '+r.prediction+'</span>'+
+        '<span class="text-dark-400 text-xs bg-dark-700/30 px-2.5 py-1 rounded-full border border-dark-600/20"><i class="fas fa-layer-group mr-1"></i>'+esc(category)+'</span>'+
+        '<span class="text-emerald-400 text-xs bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20"><i class="fas fa-newspaper mr-1"></i>'+trustedCount+' trusted sources</span>'+
+        '<span class="text-dark-500 text-xs bg-dark-700/30 px-2.5 py-1 rounded-full border border-dark-600/20"><i class="fas fa-microchip mr-1"></i>'+esc(r.method||'AI')+'</span>'+
+      '</div>'+
+      '<span class="text-dark-600 text-xs"><i class="far fa-clock mr-1"></i>'+(r.processing_time||'0')+'s</span>'+
+    '</div>'+
+    '<div class="mb-8 rounded-2xl border border-'+col+'-500/15 bg-'+col+'-500/5 p-5">'+
+      '<p class="text-white text-xl font-bold mb-1">'+verdictTitle+'</p>'+
+      '<p class="text-dark-300 text-sm leading-relaxed">'+verdictCopy+'</p>'+
+    '</div>'+
+    // Confidence gauge + stats
+    '<div class="grid sm:grid-cols-3 gap-6 mb-8">'+
+      '<div class="flex flex-col items-center justify-center">'+
+        '<div style="position:relative;width:120px;height:120px">'+
+          '<svg width="120" height="120" viewBox="0 0 100 100" style="transform:rotate(-90deg)">'+
+            '<circle cx="50" cy="50" r="40" fill="none" stroke="rgba(71,85,105,0.25)" stroke-width="8"></circle>'+
+            '<circle cx="50" cy="50" r="40" fill="none" stroke="'+confColor+'" stroke-width="8" stroke-linecap="round" stroke-dasharray="'+circ+'" stroke-dashoffset="'+off+'" style="transition:stroke-dashoffset 1.8s cubic-bezier(0.4,0,0.2,1)"></circle>'+
+          '</svg>'+
+          '<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">'+
+            '<span style="font-size:1.75rem;font-weight:800;color:'+confColor+'">'+r.confidence+'%</span>'+
+            '<span class="text-dark-500 text-xs">Confidence</span>'+
+          '</div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="sm:col-span-2 grid grid-cols-2 gap-3">'+
+        '<div class="glass rounded-xl p-3 text-center border border-dark-600/20"><i class="fas fa-face-smile text-primary-400 text-lg mb-1"></i><p class="text-dark-500 text-xs">Sentiment</p><p class="text-white text-sm font-medium"><i class="fas '+sIcon+' '+sColor+'"></i> '+esc(r.sentiment||'Neutral')+'</p></div>'+
+        '<div class="glass rounded-xl p-3 text-center border border-dark-600/20"><i class="fas fa-file-lines text-primary-400 text-lg mb-1"></i><p class="text-dark-500 text-xs">Words</p><p class="text-white text-sm font-medium">'+(r.word_count||0)+'</p></div>'+
+        '<div class="glass rounded-xl p-3 text-center border border-dark-600/20"><i class="fas fa-newspaper text-primary-400 text-lg mb-1"></i><p class="text-dark-500 text-xs">Trusted Sources</p><p class="text-white text-sm font-medium">'+trustedCount+'</p></div>'+
+        '<div class="glass rounded-xl p-3 text-center border border-dark-600/20"><i class="fas fa-microchip text-primary-400 text-lg mb-1"></i><p class="text-dark-500 text-xs">AI Verdict</p><p class="text-white text-sm font-medium truncate">'+esc(modelVerdict)+'</p></div>'+
+      '</div>'+
+    '</div>'+
+    // Explanation
+    '<div class="mb-6">'+
+      '<p class="text-dark-500 text-xs mb-2 font-medium uppercase tracking-wider"><i class="fas fa-quote-left text-primary-400 mr-1"></i> AI Explanation</p>'+
+      '<div class="glass rounded-xl p-5 border border-dark-600/20 relative">'+
+        '<div class="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-primary-500 to-transparent rounded-l-xl"></div>'+
+        '<p class="text-dark-200 text-sm leading-relaxed pl-3">'+formatExplanation(r.explanation)+'</p>'+
+      '</div>'+
+    '</div>'+
+    // Sentiment score
+    '<div class="mb-4"><p class="text-dark-500 text-xs mb-1.5 font-medium uppercase tracking-wider">Sentiment Score</p>'+
+      '<div class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium '+sBadge+'"><i class="fas '+sIcon+'"></i> '+esc(r.sentiment||'Neutral')+' <span class="opacity-60">('+(r.sentiment_score||0).toFixed(2)+')</span></div></div>'+
+    suspHtml+
+    fcHtml+
+    kwHtml+
+    '</div></div>';
+
+  container.innerHTML = html;
+  container.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// ===== IMAGE ANALYSIS =====
+function handleImg(inp){
+  var f = inp.files[0];
+  if(!f) return;
+  $('drop-zone').classList.add('active');
+  $('scan-line').style.display='block';
+  $('upload-placeholder').style.display='none';
+
+  var rd = new FileReader();
+  rd.onload = function(e){
+    $('preview-img').src = e.target.result;
+    $('image-preview').classList.remove('hidden');
+    $('drop-zone').classList.remove('active');
+    $('scan-line').style.display='none';
+    runOCR(e.target.result);
+  };
+  rd.readAsDataURL(f);
+}
+
+function removeImg(e){
+  e.stopPropagation();
+  $('img-input').value='';
+  $('image-preview').classList.add('hidden');
+  $('upload-placeholder').style.display='';
+  $('extracted-container').classList.add('hidden');
+  $('ocr-status').classList.add('hidden');
+  $('img-result').classList.add('hidden');
+}
+
+function preprocessImage(imgData){
+  return new Promise(function(resolve){
+    var c = document.createElement('canvas');
+    var ctx = c.getContext('2d');
+    var img = new Image();
+    img.onload = function(){
+      c.width = img.width;
+      c.height = img.height;
+      ctx.drawImage(img, 0, 0);
+      var d = ctx.getImageData(0, 0, c.width, c.height);
+      var px = d.data;
+      for(var i=0; i<px.length; i+=4){
+        var r=px[i], g=px[i+1], b=px[i+2];
+        var gray = 0.299*r + 0.587*g + 0.114*b;
+        var adj = gray > 128 ? Math.min(255, gray*1.2) : Math.max(0, gray*0.8);
+        px[i]=px[i+1]=px[i+2]=adj;
+      }
+      ctx.putImageData(d,0,0);
+      resolve(c.toDataURL('image/png'));
+    };
+    img.src = imgData;
+  });
+}
+
+function runOCR(imgData){
+  var st = $('ocr-status');
+  var ex = $('extracted-container');
+  var et = $('extracted-text');
+  var pb = $('ocr-bar');
+
+  st.classList.remove('hidden');
+  ex.classList.add('hidden');
+  $('ocr-status-text').textContent = 'Preprocessing image...';
+  pb.style.width='10%';
+
+  if(typeof Tesseract==='undefined'){
+    $('ocr-status-text').textContent='OCR not available';
+    showToast('Tesseract.js failed to load','error');
+    et.value='OCR engine unavailable. Paste text manually.';
+    ex.classList.remove('hidden'); st.classList.add('hidden');
+    return;
+  }
+
+  preprocessImage(imgData).then(function(processed){
+    $('ocr-status-text').textContent = 'Extracting text...';
+    pb.style.width='20%';
+    Tesseract.recognize(processed,'eng',{
+      logger:function(m){
+        if(m.status==='recognizing text'){
+          var p = Math.round(m.progress*100);
+          $('ocr-status-text').textContent='Extracting text... '+p+'%';
+          pb.style.width=(20+p*0.8)+'%';
+        }
+      }
+    }).then(function(res){
+      var txt = res.data.text.trim();
+      st.classList.add('hidden');
+      ex.classList.remove('hidden');
+      if(txt.length>0){
+        et.value=txt;
+        $('ext-chars').textContent=txt.length+' chars';
+        showToast('Text extracted! Verify and fix any errors below, then analyze.','info');
+      } else {
+        et.value='No text extracted. Try a clearer image or paste text manually.';
+        $('ext-chars').textContent='0 chars';
+        showToast('No text found in image.','info');
+      }
+    }).catch(function(err){
+      st.classList.add('hidden');
+      ex.classList.remove('hidden');
+      et.value='OCR failed: '+(err.message||'Unknown error')+'\nPaste text manually.';
+      $('ext-chars').textContent=et.value.length+' chars';
+      showToast('OCR failed. Paste text manually.','error');
+    });
+  });
+}
+
+function analyzeImgText(){
+  var txt = $('extracted-text').value.trim();
+  if(!txt||txt.startsWith('No text')||txt.startsWith('OCR failed')||txt.startsWith('OCR engine')){
+    showToast('No valid text to analyze.','error'); return;
+  }
+  if(txt.length<5){ showToast('Text too short.','error'); return; }
+
+  var btn = $('analyze-img-btn');
+  btn.disabled=true; btn.innerHTML='<div class="spinner"></div> Analyzing...';
+
+  var rd = $('img-result');
+  rd.innerHTML = getLoadingHTML('Analyzing extracted text');
+  rd.classList.remove('hidden');
+  runSteps();
+
+  var token = window.AUTH_TOKEN || '';
+  fetch('/api/predict/',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+    credentials:'same-origin',
+    body:JSON.stringify({text:txt, source_type:'image'})
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(res){
+    if(res.error){
+      rd.innerHTML = '<div class="glass rounded-2xl p-8 border-2 border-red-500/25 text-center animate-fade-in">'+
+        '<i class="fas fa-exclamation-triangle text-5xl text-red-400 mb-4"></i><p class="text-red-400 font-medium text-lg">'+res.error+'</p></div>';
+      showToast(res.error,'error'); return;
+    }
+    showResult(rd, res);
+  })
+  .catch(function(){
+    rd.innerHTML = '<div class="glass rounded-2xl p-8 border-2 border-red-500/25 text-center animate-fade-in">'+
+      '<i class="fas fa-exclamation-triangle text-5xl text-red-400 mb-4"></i><p class="text-red-400 font-medium text-lg">Analysis failed</p></div>';
+    showToast('Analysis failed.','error');
+  })
+  .finally(function(){
+    btn.disabled=false; btn.innerHTML='<i class="fas fa-shield"></i> Analyze Extracted Text';
+  });
+}
+
+// ===== DRAG & DROP =====
+var dz = $('drop-zone');
+dz.addEventListener('dragover',function(e){ e.preventDefault(); this.classList.add('active'); $('scan-line').style.display='block'; });
+dz.addEventListener('dragleave',function(){ this.classList.remove('active'); $('scan-line').style.display='none'; });
+dz.addEventListener('drop',function(e){
+  e.preventDefault();
+  this.classList.remove('active');
+  $('scan-line').style.display='none';
+  var f = e.dataTransfer.files[0];
+  if(f&&f.type.startsWith('image/')){ $('img-input').files=e.dataTransfer.files; handleImg($('img-input')); }
+  else showToast('Please drop an image file','error');
+});
+
+// ===== ?text= QUERY PARAM =====
+var qp = new URL(window.location.href).searchParams.get('text');
+if(qp){ ta.value=decodeURIComponent(qp); ta.dispatchEvent(new Event('input')); }
+</script>
+{% endblock %}

@@ -1,0 +1,88 @@
+<nav class="fixed top-0 left-0 right-0 z-50 transition-all duration-300" id="navbar">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16">
+      <a href="/" class="flex items-center space-x-3 group">
+        <div class="w-9 h-9 bg-gradient-to-br from-primary-500 via-purple-500 to-accent-500 rounded-xl flex items-center justify-center shadow-lg shadow-primary-500/30 group-hover:shadow-primary-500/50 transition-all">
+          <i class="fas fa-shield-halved text-white text-sm"></i>
+        </div>
+        <span class="font-bold text-lg hidden sm:block">
+          <span class="gradient-text">AI Fake News</span>
+          <span class="text-dark-300 text-sm font-normal"> Detector</span>
+        </span>
+      </a>
+
+      <div class="hidden md:flex items-center space-x-1" id="nav-links">
+        <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}"><i class="fas fa-home mr-1.5 text-xs"></i>Home</a>
+        <a href="/about" class="nav-link {% if request.path == '/about' %}active{% endif %}"><i class="fas fa-info-circle mr-1.5 text-xs"></i>About</a>
+        <a href="/contact" class="nav-link {% if request.path == '/contact' %}active{% endif %}"><i class="fas fa-envelope mr-1.5 text-xs"></i>Contact</a>
+        <div class="w-px h-6 bg-dark-600/50 mx-2"></div>
+        <a href="/dashboard" class="nav-link {% if request.path == '/dashboard' %}active{% endif %}"><i class="fas fa-chart-pie mr-1.5 text-xs"></i>Dashboard</a>
+        <a href="/detect" class="nav-link {% if request.path == '/detect' %}active{% endif %}"><i class="fas fa-shield mr-1.5 text-xs"></i>Detect</a>
+        <a href="/history" class="nav-link {% if request.path == '/history' %}active{% endif %}"><i class="fas fa-clock-rotate mr-1.5 text-xs"></i>History</a>
+        {% if session.is_admin %}
+        <a href="/admin-panel" class="nav-link {% if request.path.startswith('/admin-panel') %}active{% endif %}"><i class="fas fa-cog mr-1.5 text-xs"></i>Admin Panel</a>
+        {% endif %}
+      </div>
+
+      <div class="hidden md:flex items-center space-x-3">
+        {% if session.user_id %}
+        <div class="relative" id="profile-dropdown">
+          <button onclick="toggleProfile()" class="flex items-center space-x-2 px-3 py-2 rounded-xl glass hover:border-primary-500/30 transition-all group">
+            <div class="w-8 h-8 bg-gradient-to-br from-primary-500 to-accent-500 rounded-lg flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-primary-500/20">
+              {{ session.full_name[0]|upper if session.full_name else 'U' }}
+            </div>
+            <span class="text-sm text-dark-200 max-w-[100px] truncate">{{ session.full_name or session.username }}</span>
+            <i class="fas fa-chevron-down text-dark-400 text-xs group-hover:text-white transition-all"></i>
+          </button>
+          <div id="profile-menu" class="absolute right-0 mt-2 w-56 glass rounded-2xl p-2 shadow-xl border border-dark-600/30 hidden animate-slide-down">
+            <div class="px-3 py-2 border-b border-dark-600/30 mb-1">
+              <p class="text-sm font-medium text-white">{{ session.full_name }}</p>
+              <p class="text-xs text-dark-400">{{ session.email }}</p>
+              {% if session.is_admin %}
+              <span class="inline-block mt-1 px-2 py-0.5 bg-primary-500/20 text-primary-400 text-xs rounded-full">Admin</span>
+              {% endif %}
+            </div>
+            <a href="/change-password" class="flex items-center gap-2 px-3 py-2 text-sm text-dark-300 hover:text-white hover:bg-dark-700/50 rounded-xl transition-all"><i class="fas fa-lock text-dark-400 text-xs"></i> Change Password</a>
+            <a href="/logout" class="flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-xl transition-all mt-1"><i class="fas fa-right-from-bracket text-xs"></i> Sign Out</a>
+          </div>
+        </div>
+        {% else %}
+        <a href="/login" class="btn-secondary text-sm py-2 px-4"><i class="fas fa-right-to-bracket mr-1.5"></i>Sign In</a>
+        <a href="/signup" class="btn-primary text-sm py-2 px-4"><i class="fas fa-user-plus mr-1.5"></i>Get Started</a>
+        {% endif %}
+      </div>
+
+      <button onclick="toggleMobileMenu()" class="md:hidden p-2.5 rounded-xl glass hover:border-primary-500/30 transition-all" id="mobile-menu-btn">
+        <i class="fas fa-bars text-dark-300 text-lg" id="menu-icon"></i>
+      </button>
+    </div>
+  </div>
+
+  <div id="mobile-menu" class="md:hidden glass border-t border-dark-600/30 hidden">
+    <div class="px-4 py-3 space-y-1">
+      <a href="/" class="mobile-nav-link"><i class="fas fa-home mr-2 text-primary-400"></i>Home</a>
+      <a href="/about" class="mobile-nav-link"><i class="fas fa-info-circle mr-2 text-primary-400"></i>About</a>
+      <a href="/contact" class="mobile-nav-link"><i class="fas fa-envelope mr-2 text-primary-400"></i>Contact</a>
+      <hr class="border-dark-600/30 my-2">
+      <a href="/dashboard" class="mobile-nav-link"><i class="fas fa-chart-pie mr-2 text-accent-400"></i>Dashboard</a>
+      <a href="/detect" class="mobile-nav-link"><i class="fas fa-shield mr-2 text-accent-400"></i>Detect News</a>
+      <a href="/history" class="mobile-nav-link"><i class="fas fa-clock-rotate mr-2 text-accent-400"></i>History</a>
+      {% if session.is_admin %}
+      <a href="/admin-panel" class="mobile-nav-link"><i class="fas fa-cog mr-2 text-accent-400"></i>Admin Panel</a>
+      {% endif %}
+      <hr class="border-dark-600/30 my-2">
+      <div class="px-1">
+        {% if session.user_id %}
+        <div class="px-4 py-2 text-sm text-dark-400">Signed in as <span class="text-white font-medium">{{ session.full_name or session.username }}</span></div>
+        <a href="/change-password" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-dark-300 hover:bg-dark-800/50"><i class="fas fa-lock text-dark-400"></i> Change Password</a>
+        <a href="/logout" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-red-400 hover:bg-red-500/10"><i class="fas fa-right-from-bracket"></i> Sign Out</a>
+        {% else %}
+        <div class="flex space-x-2">
+          <a href="/login" class="flex-1 btn-secondary text-sm py-2.5 text-center"><i class="fas fa-right-to-bracket mr-1"></i> Sign In</a>
+          <a href="/signup" class="flex-1 btn-primary text-sm py-2.5 text-center"><i class="fas fa-user-plus mr-1"></i> Get Started</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</nav>

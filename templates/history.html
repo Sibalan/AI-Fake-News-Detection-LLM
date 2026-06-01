@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+{% block title %}History | AI Fake News Detector{% endblock %}
+{% block content %}
+<style>
+@keyframes slide-in-left { from{opacity:0;transform:translateX(-30px)} to{opacity:1;transform:translateX(0)} }
+@keyframes slide-in-right { from{opacity:0;transform:translateX(30px)} to{opacity:1;transform:translateX(0)} }
+@keyframes glow-pulse-blue { 0%,100%{box-shadow:0 0 15px rgba(59,130,246,0.1)} 50%{box-shadow:0 0 30px rgba(59,130,246,0.2)} }
+.history-card{transition:all 0.3s;border:1px solid rgba(71,85,105,0.2)}
+.history-card:hover{border-color:rgba(99,102,241,0.3);transform:translateX(4px)}
+.filter-chip{transition:all 0.2s;cursor:pointer}
+.filter-chip.active-real{background:rgba(34,197,94,0.15);color:#34d399;border-color:rgba(34,197,94,0.3)}
+.filter-chip.active-fake{background:rgba(239,68,68,0.15);color:#f87171;border-color:rgba(239,68,68,0.3)}
+.filter-chip.active-all{background:rgba(99,102,241,0.15);color:#818cf8;border-color:rgba(99,102,241,0.3)}
+</style>
+
+<div class="pt-20 pb-12 relative">
+  <div class="absolute inset-0 pointer-events-none overflow-hidden">
+    <div class="absolute top-30 left-10 w-64 h-64 bg-primary-500/8 rounded-full blur-3xl"></div>
+    <div class="absolute bottom-20 right-10 w-80 h-80 bg-accent-500/8 rounded-full blur-3xl"></div>
+  </div>
+
+  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 animate-fade-in">
+      <div>
+        <div class="flex items-center gap-3 mb-2">
+          <div class="w-12 h-12 bg-gradient-to-br from-primary-500 via-purple-500 to-accent-500 rounded-2xl flex items-center justify-center shadow-xl shadow-primary-500/25">
+            <i class="fas fa-clock-rotate text-white text-lg"></i>
+          </div>
+          <div>
+            <h1 class="text-3xl sm:text-4xl font-extrabold text-white">History</h1>
+            <p class="text-dark-400 text-sm" id="total-count">Loading...</p>
+          </div>
+        </div>
+      </div>
+      <button onclick="if(confirm('Clear all history? This cannot be undone.')){deleteAll()}" class="btn-danger text-sm py-2.5 px-5 hidden" id="clear-btn"><i class="fas fa-trash-can mr-2"></i> Clear All</button>
+    </div>
+
+    <!-- Stats Summary -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8 animate-fade-in" style="animation-delay:0.05s" id="summary-stats">
+      <div class="glass rounded-xl p-4 text-center border border-dark-600/30"><p class="text-dark-500 text-xs font-medium uppercase tracking-wider">Total</p><p class="text-2xl font-bold text-white mt-1" id="sum-total">-</p></div>
+      <div class="glass rounded-xl p-4 text-center border border-emerald-500/15"><p class="text-dark-500 text-xs font-medium uppercase tracking-wider">Real</p><p class="text-2xl font-bold text-emerald-400 mt-1" id="sum-real">-</p></div>
+      <div class="glass rounded-xl p-4 text-center border border-red-500/15"><p class="text-dark-500 text-xs font-medium uppercase tracking-wider">Fake</p><p class="text-2xl font-bold text-red-400 mt-1" id="sum-fake">-</p></div>
+      <div class="glass rounded-xl p-4 text-center border border-primary-500/15"><p class="text-dark-500 text-xs font-medium uppercase tracking-wider">Avg Conf</p><p class="text-2xl font-bold gradient-text mt-1" id="sum-conf">-</p></div>
+    </div>
+
+    <!-- Search & Filter -->
+    <div class="flex flex-col sm:flex-row gap-4 mb-8 animate-fade-in" style="animation-delay:0.1s">
+      <div class="relative flex-1">
+        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-dark-400"></i>
+        <input type="text" id="search-input" placeholder="Search news text..." class="input-field pl-11" oninput="debounceSearch()" />
+      </div>
+      <div class="flex gap-2 flex-wrap">
+        <button onclick="filterPrediction('')" class="filter-chip px-4 py-2.5 glass rounded-xl text-sm font-medium text-dark-400 hover:text-white active-all" data-filter="">All</button>
+        <button onclick="filterPrediction('REAL')" class="filter-chip px-4 py-2.5 glass rounded-xl text-sm font-medium text-dark-400 hover:text-white" data-filter="REAL"><i class="fas fa-check-circle text-emerald-400 mr-1.5"></i>Real</button>
+        <button onclick="filterPrediction('FAKE')" class="filter-chip px-4 py-2.5 glass rounded-xl text-sm font-medium text-dark-400 hover:text-white" data-filter="FAKE"><i class="fas fa-times-circle text-red-400 mr-1.5"></i>Fake</button>
+      </div>
+    </div>
+
+    <!-- History List -->
+    <div id="history-list" class="min-h-[300px]">
+      <div class="text-center py-20"><div class="spinner mx-auto mb-4" style="width:2.5rem;height:2.5rem;border-width:3px"></div><p class="text-dark-400 font-medium">Loading history...</p></div>
+    </div>
+
+    <!-- Pagination -->
+    <div id="pagination" class="flex items-center justify-center gap-2 mt-10 hidden"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+var currentPage = 1;
+var currentFilter = '';
+var currentSearch = '';
+var debounceTimer;
+
+function debounceSearch() {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(function() {
+    currentSearch = document.getElementById('search-input').value;
+    currentPage = 1;
+    loadHistory();
+  }, 400);
+}
+
+function filterPrediction(filter) {
+  currentFilter = filter;
+  currentPage = 1;
+  document.querySelectorAll('.filter-chip').forEach(function(b) {
+    b.classList.remove('active-all', 'active-real', 'active-fake');
+  });
+  var el = document.querySelector('.filter-chip[data-filter="' + filter + '"]');
+  if (filter === '') el.classList.add('active-all');
+  else if (filter === 'REAL') el.classList.add('active-real');
+  else el.classList.add('active-fake');
+  loadHistory();
+}
+
+function loadHistory() {
+  var params = 'page=' + currentPage + '&per_page=10&sort_by=created_at&sort_order=desc';
+  if (currentSearch) params += '&search=' + encodeURIComponent(currentSearch);
+  if (currentFilter) params += '&prediction=' + currentFilter;
+
+  Promise.all([
+    apiGet('/api/history/?' + params).then(function(r){return r.json()}),
+    apiGet('/api/history/stats').then(function(r){return r.json()})
+  ]).then(function(results) {
+    var data = results[0];
+    var stats = results[1];
+
+    // Update summary
+    document.getElementById('sum-total').textContent = stats.total || 0;
+    document.getElementById('sum-real').textContent = stats.real_count || 0;
+    document.getElementById('sum-fake').textContent = stats.fake_count || 0;
+    document.getElementById('sum-conf').textContent = (stats.avg_confidence || 0).toFixed(1) + '%';
+
+    var items = data.history || [];
+    document.getElementById('total-count').textContent = data.total + ' total analyses';
+    var list = document.getElementById('history-list');
+    var clearBtn = document.getElementById('clear-btn');
+
+    if (data.total > 0) clearBtn.classList.remove('hidden'); else clearBtn.classList.add('hidden');
+
+    if (items.length === 0) {
+      list.innerHTML = '<div class="card text-center py-20 animate-fade-in"><div class="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-dark-600 to-dark-700 rounded-2xl flex items-center justify-center"><i class="fas fa-clock-rotate text-dark-400 text-3xl"></i></div><p class="text-dark-400 text-lg font-medium">No analysis history found</p><p class="text-dark-500 text-sm mt-2 max-w-md mx-auto">Start analyzing news to see your history here. Navigate to the <a href="/detect" class="text-primary-400 hover:text-primary-300">Detect page</a> to get started.</p></div>';
+      document.getElementById('pagination').classList.add('hidden');
+      return;
+    }
+
+    var html = '<div class="space-y-4">';
+    items.forEach(function(item, idx) {
+      var isReal = item.prediction === 'REAL';
+      var badge = isReal ? 'badge-real' : 'badge-fake';
+      var badgeIcon = isReal ? 'fa-check-circle' : 'fa-times-circle';
+      var borderAccent = isReal ? 'border-l-emerald-500/50' : 'border-l-red-500/50';
+
+      html += '<div class="history-card glass rounded-2xl overflow-hidden border-l-4 ' + borderAccent + ' animate-fade-in" style="animation-delay:' + (idx * 0.05) + 's">' +
+        '<div class="p-5">' +
+          '<div class="flex items-start justify-between gap-4">' +
+            '<div class="flex-1 min-w-0">' +
+              '<p class="text-dark-200 text-sm leading-relaxed cursor-pointer hover:text-white transition-all line-clamp-2" onclick="toggleExpand(' + item.id + ')">' +
+                '<i class="fas fa-chevron-right text-dark-500 text-xs mr-2 transition-transform" id="chevron-' + item.id + '"></i>' +
+                escapeHtml(item.news_text) +
+              '</p>' +
+              '<div class="flex items-center gap-4 mt-3 flex-wrap">' +
+                '<span class="' + badge + ' text-xs px-3 py-1"><i class="fas ' + badgeIcon + ' mr-1"></i> ' + item.prediction + '</span>' +
+                '<span class="text-sm font-bold ' + (isReal ? 'text-emerald-400' : 'text-red-400') + '">' + item.confidence + '%</span>' +
+                '<span class="text-dark-500 text-xs flex items-center gap-1.5"><i class="fas fa-clock"></i> ' + formatDate(item.created_at) + '</span>' +
+                (item.domain ? '<span class="text-dark-500 text-xs bg-dark-700/30 px-2.5 py-0.5 rounded-full">' + item.domain + '</span>' : '') +
+              '</div>' +
+            '</div>' +
+            '<div class="flex items-center gap-2 shrink-0">' +
+              '<button onclick="reAnalyze(' + item.id + ')" class="p-2.5 text-dark-400 hover:text-primary-400 hover:bg-primary-500/10 rounded-xl transition-all" title="Re-analyze"><i class="fas fa-rotate"></i></button>' +
+              '<button onclick="deleteItem(' + item.id + ')" class="p-2.5 text-dark-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all" title="Delete"><i class="fas fa-trash-can"></i></button>' +
+            '</div>' +
+          '</div>' +
+          '<div id="expand-' + item.id + '" class="mt-4 pt-4 border-t border-dark-600/30 hidden">' +
+            '<p class="text-dark-500 text-xs font-medium mb-2 flex items-center gap-1.5"><i class="fas fa-microchip text-primary-400"></i> AI EXPLANATION</p>' +
+            '<p class="text-dark-300 text-sm leading-relaxed">' + (item.explanation || 'No explanation available') + '</p>';
+            if (item.keywords && item.keywords.length > 0) {
+              html += '<div class="flex flex-wrap gap-1.5 mt-3">' +
+                item.keywords.map(function(kw) { return '<span class="px-2.5 py-1 bg-dark-700/50 text-dark-400 text-xs rounded-full border border-dark-600/30">' + kw + '</span>'; }).join('') +
+                '</div>';
+            }
+            html += '<div class="mt-4 flex gap-2">' +
+              '<button onclick="reAnalyzeById(' + item.id + ',\'' + escapeHtml(item.news_text).replace(/'/g,"\\'") + '\')" class="px-4 py-2 bg-primary-500/15 text-primary-400 text-xs font-medium rounded-xl hover:bg-primary-500/25 transition-all"><i class="fas fa-rotate mr-1"></i> Re-analyze</button>' +
+            '</div>' +
+          '</div>' +
+        '</div></div>';
+    });
+    html += '</div>';
+    list.innerHTML = html;
+
+    // Pagination
+    var pag = document.getElementById('pagination');
+    if (data.pages <= 1) { pag.classList.add('hidden'); return; }
+    pag.classList.remove('hidden');
+    var phtml = '<button onclick="goPage(' + (currentPage - 1) + ')" class="p-2.5 glass rounded-xl ' + (currentPage <= 1 ? 'opacity-30 cursor-not-allowed' : 'hover:border-primary-500/30') + '" ' + (currentPage <= 1 ? 'disabled' : '') + '><i class="fas fa-chevron-left text-dark-300 text-sm"></i></button>';
+    for (var i = 1; i <= data.pages; i++) {
+      phtml += '<button onclick="goPage(' + i + ')" class="w-10 h-10 rounded-xl text-sm font-medium transition-all ' + (i === currentPage ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30 shadow-lg shadow-primary-500/10' : 'glass text-dark-400 hover:text-white') + '">' + i + '</button>';
+    }
+    phtml += '<button onclick="goPage(' + (currentPage + 1) + ')" class="p-2.5 glass rounded-xl ' + (currentPage >= data.pages ? 'opacity-30 cursor-not-allowed' : 'hover:border-primary-500/30') + '" ' + (currentPage >= data.pages ? 'disabled' : '') + '><i class="fas fa-chevron-right text-dark-300 text-sm"></i></button>';
+    pag.innerHTML = phtml;
+  });
+}
+
+function goPage(page) {
+  currentPage = page;
+  loadHistory();
+  window.scrollTo({ top: 300, behavior: 'smooth' });
+}
+
+function toggleExpand(id) {
+  var el = document.getElementById('expand-' + id);
+  var chevron = document.getElementById('chevron-' + id);
+  el.classList.toggle('hidden');
+  if (chevron) chevron.style.transform = el.classList.contains('hidden') ? '' : 'rotate(90deg)';
+}
+
+function deleteItem(id) {
+  if (!confirm('Delete this analysis?')) return;
+  apiDelete('/api/history/' + id)
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (res.message) { showToast('Deleted', 'success'); loadHistory(); }
+      else { showToast(res.error || 'Failed to delete', 'error'); }
+    });
+}
+
+function deleteAll() {
+  apiDelete('/api/history/clear')
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (res.message) { showToast('All history cleared', 'success'); loadHistory(); }
+      else { showToast(res.error || 'Failed to clear', 'error'); }
+    });
+}
+
+function reAnalyze(id) {
+  apiGet('/api/history/' + id)
+    .then(function(r) { return r.json(); })
+    .then(function(item) {
+      if (item && item.news_text) {
+        window.location.href = '/detect?text=' + encodeURIComponent(item.news_text);
+      }
+    });
+}
+
+function reAnalyzeById(id, text) {
+  window.location.href = '/detect?text=' + encodeURIComponent(text);
+}
+
+function escapeHtml(text) {
+  var div = document.createElement('div');
+  div.appendChild(document.createTextNode(text || ''));
+  return div.innerHTML;
+}
+
+loadHistory();
+</script>
+{% endblock %}

@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="overflow-hidden">
+  <section class="relative min-h-screen flex items-center justify-center pt-20">
+    <div class="absolute inset-0 overflow-hidden pointer-events-none">
+      <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-500/10 rounded-full blur-3xl"></div>
+      <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent-500/10 rounded-full blur-3xl"></div>
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary-500/5 rounded-full blur-3xl"></div>
+    </div>
+
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <div class="animate-fade-in">
+        <div class="inline-flex items-center px-4 py-2 glass rounded-full mb-8 border border-primary-500/20">
+          <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse mr-2"></span>
+          <span class="text-dark-300 text-sm">Next-Gen Fake News Detection Powered by LLM</span>
+        </div>
+      </div>
+
+      <h1 class="text-4xl sm:text-6xl lg:text-7xl font-extrabold leading-tight mb-6 animate-fade-in stagger-1">
+        Detect <span class="gradient-text">Fake News</span> with<br />
+        <span class="text-white">LLM Intelligence</span>
+      </h1>
+
+      <p class="text-dark-400 text-lg sm:text-xl max-w-3xl mx-auto mb-10 leading-relaxed animate-fade-in stagger-2">
+        Harness the power of advanced Language Models to instantly analyze news articles, verify facts, and uncover misinformation with unprecedented accuracy — all running locally on your machine.
+      </p>
+
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in stagger-3">
+        {% if session.user_id %}
+        <a href="/dashboard" class="btn-primary text-lg px-8 py-4"><i class="fas fa-arrow-right mr-2"></i> Go to Dashboard</a>
+        {% else %}
+        <a href="/signup" class="btn-primary text-lg px-8 py-4"><i class="fas fa-arrow-right mr-2"></i> Get Started Free</a>
+        <a href="/about" class="btn-secondary text-lg px-8 py-4">Learn More</a>
+        {% endif %}
+      </div>
+
+      <div class="mt-16 grid grid-cols-2 sm:grid-cols-4 gap-6 max-w-3xl mx-auto animate-fade-in stagger-4">
+        <div class="glass rounded-2xl p-4 text-center">
+          <i class="fas fa-chart-line text-primary-400 text-2xl mb-2"></i>
+          <div class="text-2xl font-bold gradient-text">95%</div>
+          <div class="text-dark-400 text-sm">Accuracy</div>
+        </div>
+        <div class="glass rounded-2xl p-4 text-center">
+          <i class="fas fa-microchip text-primary-400 text-2xl mb-2"></i>
+          <div class="text-2xl font-bold gradient-text">Real-time</div>
+          <div class="text-dark-400 text-sm">Analysis</div>
+        </div>
+        <div class="glass rounded-2xl p-4 text-center">
+          <i class="fas fa-database text-primary-400 text-2xl mb-2"></i>
+          <div class="text-2xl font-bold gradient-text">Phi-3</div>
+          <div class="text-dark-400 text-sm">LLM Powered</div>
+        </div>
+        <div class="glass rounded-2xl p-4 text-center">
+          <i class="fas fa-check-circle text-primary-400 text-2xl mb-2"></i>
+          <div class="text-2xl font-bold gradient-text">Free</div>
+          <div class="text-dark-400 text-sm">To Use</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="py-24 relative">
+    <div class="absolute inset-0 bg-gradient-to-b from-dark-950 via-dark-900/50 to-dark-950 pointer-events-none"></div>
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-16 animate-on-scroll">
+        <h2 class="section-title">How It Works</h2>
+        <p class="section-subtitle">Three simple steps to verify any news article using advanced AI</p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-8">
+        <div class="card-hover text-center p-8 animate-on-scroll stagger-1">
+          <div class="w-16 h-16 bg-gradient-to-br from-primary-500/20 to-accent-500/20 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-primary-500/20">
+            <i class="fas fa-microchip text-primary-400 text-2xl"></i>
+          </div>
+          <div class="text-5xl font-bold text-dark-700/50 mb-4">01</div>
+          <h3 class="text-xl font-semibold text-white mb-3">Enter News Text</h3>
+          <p class="text-dark-400 leading-relaxed">Paste any news article, headline, or statement you want to verify.</p>
+        </div>
+        <div class="card-hover text-center p-8 animate-on-scroll stagger-2">
+          <div class="w-16 h-16 bg-gradient-to-br from-primary-500/20 to-accent-500/20 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-primary-500/20">
+            <i class="fas fa-shield-alt text-primary-400 text-2xl"></i>
+          </div>
+          <div class="text-5xl font-bold text-dark-700/50 mb-4">02</div>
+          <h3 class="text-xl font-semibold text-white mb-3">AI Analysis</h3>
+          <p class="text-dark-400 leading-relaxed">Our Phi-3 LLM analyzes the content for patterns, sentiment, and credibility markers.</p>
+        </div>
+        <div class="card-hover text-center p-8 animate-on-scroll stagger-3">
+          <div class="w-16 h-16 bg-gradient-to-br from-primary-500/20 to-accent-500/20 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-primary-500/20">
+            <i class="fas fa-chart-line text-primary-400 text-2xl"></i>
+          </div>
+          <div class="text-5xl font-bold text-dark-700/50 mb-4">03</div>
+          <h3 class="text-xl font-semibold text-white mb-3">Get Results</h3>
+          <p class="text-dark-400 leading-relaxed">Receive instant verdict with confidence score, AI explanation, and detailed insights.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="py-24 relative">
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-16 animate-on-scroll">
+        <h2 class="section-title">Why Choose Our System?</h2>
+        <p class="section-subtitle">Built with cutting-edge technology for accurate fake news detection</p>
+      </div>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% set features = [
+          ('microchip', 'Phi-3 LLM Powered', 'Powered by Microsoft Phi-3 running locally via Ollama for private, fast analysis.'),
+          ('shield-alt', 'High Accuracy', 'Advanced NLP analysis with confidence scoring for reliable detection results.'),
+          ('chart-line', 'Real-time Analysis', 'Get instant results with detailed AI-generated explanations for every prediction.'),
+          ('database', 'Sentiment Analysis', 'Understand the emotional tone of news content with integrated sentiment detection.'),
+          ('users', 'User Dashboard', 'Track your analysis history with beautiful visualizations and detailed statistics.'),
+           ('award', 'Intelligence Redefined', 'We Do Not Guess the Truth. We Engineer It.')
+        ] %}
+        {% for icon, title, desc in features %}
+        <div class="card-hover animate-on-scroll">
+          <i class="fas fa-{{ icon }} text-primary-400 text-3xl mb-4"></i>
+          <h3 class="text-lg font-semibold text-white mb-2">{{ title }}</h3>
+          <p class="text-dark-400 text-sm leading-relaxed">{{ desc }}</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <section class="py-24 relative">
+    <div class="absolute inset-0 bg-gradient-to-r from-primary-500/5 via-transparent to-accent-500/5 pointer-events-none"></div>
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="glass rounded-3xl p-12 text-center glow-border animate-on-scroll">
+        <h2 class="text-3xl sm:text-4xl font-bold text-white mb-4">Ready to Detect Fake News?</h2>
+        <p class="text-dark-400 text-lg mb-8 max-w-2xl mx-auto">Start analyzing news articles with AI-powered technology. No credit card required.</p>
+        {% if session.user_id %}
+        <a href="/dashboard" class="btn-primary text-lg px-10 py-4"><i class="fas fa-arrow-right mr-2"></i> Open Dashboard</a>
+        {% else %}
+        <a href="/signup" class="btn-primary text-lg px-10 py-4"><i class="fas fa-arrow-right mr-2"></i> Start Analyzing Now</a>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <section class="py-24 relative">
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-16 animate-on-scroll">
+        <h2 class="section-title">Our Mission</h2>
+        <p class="section-subtitle">Empowering truth in the digital age through cutting-edge artificial intelligence</p>
+      </div>
+
+      <div class="max-w-4xl mx-auto grid sm:grid-cols-2 gap-6 animate-on-scroll">
+        <div class="glass rounded-2xl p-6 text-center">
+          <div class="w-14 h-14 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <i class="fas fa-eye text-white text-xl"></i>
+          </div>
+          <h3 class="text-white font-bold text-lg mb-2">See the Truth</h3>
+          <p class="text-dark-400 text-sm leading-relaxed">In a world flooded with misinformation, we provide clarity. Our AI cuts through the noise to reveal what's real and what's fabricated.</p>
+        </div>
+        <div class="glass rounded-2xl p-6 text-center">
+          <div class="w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <i class="fas fa-shield text-white text-xl"></i>
+          </div>
+          <h3 class="text-white font-bold text-lg mb-2">Stay Protected</h3>
+          <p class="text-dark-400 text-sm leading-relaxed">Knowledge is power. Arm yourself with AI-driven verification tools to make informed decisions and stop the spread of false narratives.</p>
+        </div>
+        <div class="glass rounded-2xl p-6 text-center sm:col-span-2 max-w-lg mx-auto">
+          <div class="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <i class="fas fa-graduation-cap text-white text-xl"></i>
+          </div>
+          <h3 class="text-white font-bold text-lg mb-2">Built for Academia</h3>
+           <p class="text-dark-400 text-sm leading-relaxed">Forged at the intersection of AI research and human impact — Shaping a future where truth prevails through intelligent technology.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}

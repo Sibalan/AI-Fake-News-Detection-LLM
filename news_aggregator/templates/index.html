@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI News Aggregator</title>
+    <link rel="stylesheet" href="/static/css/style.css" />
+    <script>
+      window.NEWS_CATEGORIES = {{ categories|tojson }};
+    </script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="topbar">
+        <div>
+          <h1>AI News Aggregator</h1>
+          <p>Real-time news, summarization, credibility detection, and bookmarks.</p>
+        </div>
+        <div class="header-actions">
+          <button id="theme-toggle" class="btn btn-ghost">Dark mode</button>
+        </div>
+      </header>
+
+      <section class="hero-panel">
+        <div class="hero-copy">
+          <h2>Discover curated news with AI intelligence.</h2>
+          <p>Browse trusted sources, filter by category, search instantly, and save stories for later.</p>
+        </div>
+        <div class="hero-status">
+          <div class="status-card">
+            <span>Refresh every</span>
+            <strong>10 minutes</strong>
+          </div>
+          <div class="status-card">
+            <span>Model</span>
+            <strong>mixtral-8x7b</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="search-panel">
+        <div class="search-box">
+          <input id="search-input" type="search" placeholder="Search news articles..." />
+          <button id="search-button" class="btn btn-primary">Search</button>
+        </div>
+        <div class="category-list" id="category-list"></div>
+      </section>
+
+      <main class="content-grid">
+        <div class="feed-panel">
+          <div class="feed-header">
+            <h3 id="feed-title">Latest News</h3>
+            <div id="feed-badge" class="badge badge-info">AI-powered</div>
+          </div>
+          <div id="messages" class="message-box"></div>
+          <div id="news-grid" class="news-grid"></div>
+        </div>
+
+        <aside class="sidebar-panel">
+          <div class="panel card">
+            <h4>Bookmarks</h4>
+            <div id="bookmark-list" class="bookmark-list"></div>
+          </div>
+          <div class="panel card">
+            <h4>Quick Tips</h4>
+            <ul>
+              <li>Search any topic with the search bar.</li>
+              <li>Tap a story to save it to bookmarks.</li>
+              <li>Suspicious stories show a red warning badge.</li>
+              <li>All API keys remain server-side.</li>
+            </ul>
+          </div>
+        </aside>
+      </main>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+  </body>
+</html>

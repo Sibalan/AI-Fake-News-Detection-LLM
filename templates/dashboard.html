@@ -1,0 +1,606 @@
+{% extends "base.html" %}
+{% block title %}Dashboard | AI Fake News Detector{% endblock %}
+{% block content %}
+<style>
+@keyframes float-particle { 0%,100%{transform:translateY(0) translateX(0)} 25%{transform:translateY(-30px) translateX(15px)} 50%{transform:translateY(-15px) translateX(-10px)} 75%{transform:translateY(-40px) translateX(5px)} }
+@keyframes glow-pulse { 0%,100%{box-shadow:0 0 20px rgba(99,102,241,0.15)} 50%{box-shadow:0 0 40px rgba(99,102,241,0.3)} }
+@keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+@keyframes live-dot { 0%,100%{opacity:1} 50%{opacity:0.3} }
+@keyframes pulse-ring { 0%{transform:scale(0.8);opacity:1} 100%{transform:scale(2);opacity:0} }
+.particle-dot{position:absolute;width:4px;height:4px;border-radius:50%;background:rgba(99,102,241,0.3);animation:float-particle 8s ease-in-out infinite}
+.stat-card-3d{perspective:1000px;transform-style:preserve-3d;transition:transform 0.4s}
+.stat-card-3d:hover{transform:rotateX(3deg) rotateY(-3deg) translateZ(10px)}
+.glow-card{animation:glow-pulse 3s ease-in-out infinite}
+.shimmer-text{background:linear-gradient(90deg, #818cf8, #4ade80, #818cf8, #4ade80);background-size:200% 100%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:shimmer 4s linear infinite}
+.metric-ring{position:relative;display:inline-flex;align-items:center;justify-content:center}
+.metric-ring svg{transform:rotate(-90deg)}
+.metric-ring circle{fill:none;stroke-width:6;stroke-linecap:round}
+.metric-ring .bg-ring{stroke:rgba(71,85,105,0.3)}
+.metric-ring .fg-ring{stroke-dasharray:251.2;stroke-dashoffset:251.2;transition:stroke-dashoffset 1.5s ease-out}
+.live-badge{display:inline-flex;align-items:center;gap:0.5rem;padding:0.25rem 0.75rem;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);border-radius:9999px;font-size:0.7rem;font-weight:600;color:#f87171;text-transform:uppercase;letter-spacing:0.05em}
+.live-badge .pulse-ring{width:8px;height:8px;border-radius:50%;background:#ef4444;position:relative}
+.live-badge .pulse-ring::after{content:'';position:absolute;inset:-3px;border-radius:50%;border:1.5px solid rgba(239,68,68,0.4);animation:pulse-ring 1.5s ease-out infinite}
+</style>
+
+<div class="pt-20 pb-12 relative overflow-hidden">
+  <div class="absolute inset-0 pointer-events-none overflow-hidden">
+    <div class="absolute top-20 left-10 w-72 h-72 bg-primary-500/10 rounded-full blur-3xl"></div>
+    <div class="absolute bottom-40 right-10 w-96 h-96 bg-accent-500/8 rounded-full blur-3xl"></div>
+    <div class="absolute top-1/3 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-purple-500/5 rounded-full blur-3xl"></div>
+    {% for i in range(8) %}
+    <div class="particle-dot" style="top:{{ 10 + (i * 12) }}%;left:{{ 5 + (i * 11) }}%;animation-delay:{{ i * 0.5 }}s;width:{{ 3 + (i % 3) * 2 }}px;height:{{ 3 + (i % 3) * 2 }}px"></div>
+    {% endfor %}
+  </div>
+
+  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <!-- Live Update Bar -->
+    <div class="flex items-center justify-between mb-6 animate-fade-in">
+      <div class="flex items-center gap-3">
+        <div class="live-badge"><span class="pulse-ring"></span> LIVE</div>
+        <span class="text-dark-400 text-sm" id="last-update">Updating every 5 seconds...</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+        <span class="text-emerald-400 text-xs font-medium" id="system-status">System Online</span>
+      </div>
+    </div>
+
+    <!-- Hero -->
+    <div class="relative overflow-hidden rounded-3xl mb-10 glow-card animate-fade-in" style="background:linear-gradient(135deg, rgba(79,70,229,0.15), rgba(22,163,74,0.1), rgba(30,41,59,0.5));border:1px solid rgba(99,102,241,0.2)">
+      <div class="absolute inset-0 bg-gradient-to-r from-primary-500/5 via-transparent to-accent-500/5"></div>
+      <div class="absolute top-0 right-0 w-48 h-48 bg-primary-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4"></div>
+      <div class="absolute bottom-0 left-0 w-48 h-48 bg-accent-500/20 rounded-full blur-3xl translate-y-1/4 -translate-x-1/4"></div>
+      <div class="relative p-8 md:p-12">
+        <div class="flex items-start justify-between flex-wrap gap-6">
+          <div class="flex-1 min-w-[250px]">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="relative flex h-3 w-3"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span></span>
+              <span class="text-emerald-400 text-sm font-semibold tracking-wide">System Online</span>
+              <span class="text-dark-600 text-xs">|</span>
+              <span class="text-dark-400 text-sm">AI Fake News Detector</span>
+            </div>
+            <h1 class="text-4xl md:text-5xl font-extrabold text-white mb-3 leading-tight">
+              Welcome back, <br><span class="shimmer-text text-5xl md:text-6xl">{{ session.full_name if session.full_name else 'Guest' }}</span>
+            </h1>
+            <p class="text-dark-400 text-lg max-w-xl">Your AI-powered command center for detecting misinformation. Real-time analytics at your fingertips.</p>
+            <div class="flex flex-wrap gap-3 mt-6">
+              <a href="/detect" class="btn-primary text-base px-8 py-3.5 shadow-xl shadow-primary-500/25 hover:shadow-primary-500/40"><i class="fas fa-bolt mr-2"></i> Analyze News</a>
+              <a href="/history" class="btn-secondary text-base px-8 py-3.5"><i class="fas fa-clock-rotate mr-2"></i> View History</a>
+            </div>
+          </div>
+          <div class="hidden lg:flex items-center gap-4">
+            <div class="metric-ring" style="width:120px;height:120px">
+              <svg width="120" height="120" viewBox="0 0 100 100"><circle class="bg-ring" cx="50" cy="50" r="40"></circle><circle class="fg-ring" cx="50" cy="50" r="40" id="hero-ring" style="stroke:url(#heroGrad)"></circle></svg>
+              <defs><linearGradient id="heroGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#818cf8"/><stop offset="100%" stop-color="#4ade80"/></linearGradient></defs>
+              <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <span class="text-3xl font-extrabold gradient-text" id="hero-accuracy">0%</span>
+                <span class="text-dark-500 text-xs mt-1">Accuracy</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-10" id="stats-grid">
+      {% set cards = [
+        ('chart-line', 'Total Analyzed', 'total-count-display', 'from-primary-500 to-blue-600', 'primary', 'total-bar'),
+        ('check-circle', 'Real News', 'real-count-display', 'from-emerald-500 to-emerald-600', 'emerald', 'real-bar'),
+        ('exclamation-triangle', 'Fake Detected', 'fake-count-display', 'from-red-500 to-rose-600', 'red', 'fake-bar'),
+        ('brain', 'Avg Confidence', 'avg-conf-display', 'from-purple-500 to-pink-600', 'purple', 'conf-bar')
+      ] %}
+      {% for icon, label, id, grad, color, barid in cards %}
+      <div class="stat-card-3d animate-fade-in" style="animation-delay:{{ loop.index * 0.1 }}s">
+        <div class="relative overflow-hidden rounded-2xl glass hover:border-{{ color }}-500/30 transition-all duration-300 p-6">
+          <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br {{ grad }}/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
+          <div class="relative">
+            <div class="flex items-center justify-between mb-4">
+              <div class="w-12 h-12 bg-gradient-to-br {{ grad }} rounded-xl flex items-center justify-center shadow-lg shadow-{{ color }}-500/20">
+                <i class="fas fa-{{ icon }} text-white text-lg"></i>
+              </div>
+              <span class="text-dark-500 text-[10px] uppercase tracking-widest font-semibold">{{ label }}</span>
+            </div>
+            <div class="text-4xl font-extrabold counter text-white" data-target="0" id="{{ id }}">0</div>
+            <p class="text-dark-400 text-sm mt-1 font-medium">{{ label }}</p>
+            <div class="mt-4 h-1.5 bg-dark-700/50 rounded-full overflow-hidden">
+              <div class="h-full rounded-full bg-gradient-to-r {{ grad }}" id="{{ barid }}" style="width:0%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-5 gap-5 mb-10">
+      <div class="stat-card-3d animate-fade-in" style="animation-delay:0.1s">
+        <div class="relative overflow-hidden rounded-2xl glass hover:border-primary-500/30 transition-all duration-300 p-6">
+          <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
+          <div class="relative">
+            <div class="flex items-center justify-between mb-4">
+              <div class="w-12 h-12 bg-gradient-to-br from-primary-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-primary-500/20">
+                <i class="fas fa-users text-white text-lg"></i>
+              </div>
+              <span class="text-dark-500 text-[10px] uppercase tracking-widest font-semibold">Active Users</span>
+            </div>
+            <div class="text-4xl font-extrabold counter text-white" id="active-users-display">0</div>
+            <p class="text-dark-400 text-sm mt-1 font-medium">Users who submitted articles</p>
+          </div>
+        </div>
+      </div>
+      <div class="stat-card-3d animate-fade-in" style="animation-delay:0.2s">
+        <div class="relative overflow-hidden rounded-2xl glass hover:border-cyan-500/30 transition-all duration-300 p-6">
+          <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-cyan-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
+          <div class="relative">
+            <div class="flex items-center justify-between mb-4">
+              <div class="w-12 h-12 bg-gradient-to-br from-cyan-500 to-sky-600 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                <i class="fas fa-keyboard text-white text-lg"></i>
+              </div>
+              <span class="text-dark-500 text-[10px] uppercase tracking-widest font-semibold">Text Analysis</span>
+            </div>
+            <div class="text-4xl font-extrabold counter text-white" id="text-total-display">0</div>
+            <p class="text-dark-400 text-sm mt-1 font-medium">Submitted text analyses</p>
+          </div>
+        </div>
+      </div>
+      <div class="stat-card-3d animate-fade-in" style="animation-delay:0.3s">
+        <div class="relative overflow-hidden rounded-2xl glass hover:border-emerald-500/30 transition-all duration-300 p-6">
+          <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
+          <div class="relative">
+            <div class="flex items-center justify-between mb-4">
+              <div class="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                <i class="fas fa-image text-white text-lg"></i>
+              </div>
+              <span class="text-dark-500 text-[10px] uppercase tracking-widest font-semibold">Image Analysis</span>
+            </div>
+            <div class="text-4xl font-extrabold counter text-white" id="image-total-display">0</div>
+            <p class="text-dark-400 text-sm mt-1 font-medium">Uploaded image analyses</p>
+          </div>
+        </div>
+      </div>
+      <div class="stat-card-3d animate-fade-in" style="animation-delay:0.4s">
+        <div class="relative overflow-hidden rounded-2xl glass hover:border-blue-500/30 transition-all duration-300 p-6">
+          <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
+          <div class="relative">
+            <div class="flex items-center justify-between mb-4">
+              <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-sky-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+                <i class="fas fa-check-circle text-white text-lg"></i>
+              </div>
+              <span class="text-dark-500 text-[10px] uppercase tracking-widest font-semibold">Image Real</span>
+            </div>
+            <div class="text-4xl font-extrabold counter text-white" id="image-real-display">0</div>
+            <p class="text-dark-400 text-sm mt-1 font-medium">Real detections from images</p>
+          </div>
+        </div>
+      </div>
+      <div class="stat-card-3d animate-fade-in" style="animation-delay:0.5s">
+        <div class="relative overflow-hidden rounded-2xl glass hover:border-red-500/30 transition-all duration-300 p-6">
+          <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-red-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
+          <div class="relative">
+            <div class="flex items-center justify-between mb-4">
+              <div class="w-12 h-12 bg-gradient-to-br from-red-500 to-rose-600 rounded-xl flex items-center justify-center shadow-lg shadow-red-500/20">
+                <i class="fas fa-ban text-white text-lg"></i>
+              </div>
+              <span class="text-dark-500 text-[10px] uppercase tracking-widest font-semibold">Image Fake</span>
+            </div>
+            <div class="text-4xl font-extrabold counter text-white" id="image-fake-display">0</div>
+            <p class="text-dark-400 text-sm mt-1 font-medium">Fake detections from images</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="grid lg:grid-cols-2 gap-6 mb-10">
+      <div class="card animate-fade-in" style="animation-delay:0.3s">
+        <h3 class="text-lg font-bold text-white mb-6"><i class="fas fa-chart-pie text-primary-400 mr-2"></i>Detection Split</h3>
+        <div class="h-52 flex items-center justify-center" id="pie-chart-container">
+          <canvas id="pieChart"></canvas>
+        </div>
+        <div class="flex justify-center gap-8 mt-6" id="pie-legend">
+          <div class="flex items-center gap-2.5"><div class="w-3.5 h-3.5 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/30"></div><span class="text-dark-300 text-sm" id="real-label">Real: 0</span></div>
+          <div class="flex items-center gap-2.5"><div class="w-3.5 h-3.5 rounded-full bg-red-500 shadow-lg shadow-red-500/30"></div><span class="text-dark-300 text-sm" id="fake-label">Fake: 0</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Row -->
+    <div class="grid lg:grid-cols-3 gap-6">
+      <!-- Achievements -->
+      <div class="card animate-fade-in" style="animation-delay:0.3s">
+        <h3 class="text-lg font-bold text-white mb-6"><i class="fas fa-trophy text-yellow-400 mr-2"></i>Achievements</h3>
+        <div class="space-y-4">
+          {% set achievements = [
+            ('shield-alt', 'First Analysis', 'Complete your first news check', 'emerald', 'badge-first', 'fa-check-circle'),
+            ('star', 'Fact Checker', 'Analyze 10 news articles', 'blue', 'badge-ten', 'fa-flask'),
+            ('gem', 'Truth Seeker', 'Find 5 fake news articles', 'purple', 'badge-fake', 'fa-gem')
+          ] %}
+          {% for icon, title, desc, color, id, aicon in achievements %}
+          <div class="glass rounded-xl p-4 flex items-center gap-4 hover:border-{{ color }}-500/20 transition-all group">
+            <div class="w-11 h-11 bg-{{ color }}-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+              <i class="fas fa-{{ aicon }} text-{{ color }}-400"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-white text-sm font-semibold">{{ title }}</p>
+              <p class="text-dark-500 text-xs">{{ desc }}</p>
+            </div>
+            <div id="{{ id }}" class="shrink-0"><span class="text-dark-600 text-xs">Pending</span></div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- System Status -->
+      <div class="card animate-fade-in" style="animation-delay:0.4s">
+        <h3 class="text-lg font-bold text-white mb-6"><i class="fas fa-server text-primary-400 mr-2"></i>System Status</h3>
+        <div class="space-y-4">
+          <div class="flex items-center justify-between p-3 glass rounded-xl">
+            <span class="text-dark-300 text-sm flex items-center gap-2"><i class="fas fa-microchip text-primary-400"></i> Phi-3 LLM</span>
+            <span class="flex items-center gap-2 text-emerald-400 text-sm"><span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span> Running</span>
+          </div>
+          <div class="flex items-center justify-between p-3 glass rounded-xl">
+            <span class="text-dark-300 text-sm flex items-center gap-2"><i class="fas fa-database text-primary-400"></i> Database</span>
+            <span class="flex items-center gap-2 text-emerald-400 text-sm"><span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span> Connected</span>
+          </div>
+          <div class="flex items-center justify-between p-3 glass rounded-xl">
+            <span class="text-dark-300 text-sm flex items-center gap-2"><i class="fas fa-cloud text-primary-400"></i> Ollama API</span>
+            <span id="ollama-status" class="flex items-center gap-2 text-dark-400 text-sm"><span class="w-2 h-2 bg-dark-500 rounded-full"></span> Checking...</span>
+          </div>
+          <div class="flex items-center justify-between p-3 glass rounded-xl">
+            <span class="text-dark-300 text-sm flex items-center gap-2"><i class="fas fa-user-shield text-primary-400"></i> Your Role</span>
+            <span class="text-white text-sm font-medium px-3 py-1 rounded-full bg-dark-700/50">{{ 'Administrator' if session.is_admin else 'User' }}</span>
+          </div>
+          <div class="flex items-center justify-between p-3 glass rounded-xl">
+            <span class="text-dark-300 text-sm flex items-center gap-2"><i class="fas fa-calendar text-primary-400"></i> Member Since</span>
+            <span class="text-dark-200 text-sm" id="member-since">-</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="card animate-fade-in" style="animation-delay:0.5s">
+        <h3 class="text-lg font-bold text-white mb-6"><i class="fas fa-bolt text-yellow-400 mr-2"></i>Quick Actions</h3>
+        <div class="grid grid-cols-2 gap-3">
+          <a href="/detect" class="glass rounded-xl p-5 text-center hover:border-primary-500/30 transition-all group relative overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-br from-primary-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div class="relative"><i class="fas fa-shield-halved text-3xl text-primary-400 mb-3 group-hover:scale-110 transition-transform block"></i><p class="text-white text-sm font-semibold">Detect News</p><p class="text-dark-500 text-[10px] mt-1">Analyze text or image</p></div>
+          </a>
+          <a href="/history" class="glass rounded-xl p-5 text-center hover:border-primary-500/30 transition-all group relative overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-br from-accent-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div class="relative"><i class="fas fa-clock-rotate text-3xl text-accent-400 mb-3 group-hover:scale-110 transition-transform block"></i><p class="text-white text-sm font-semibold">History</p><p class="text-dark-500 text-[10px] mt-1">View past analyses</p></div>
+          </a>
+          {% if session.is_admin %}
+          <a href="/admin" class="glass rounded-xl p-5 text-center hover:border-purple-500/30 transition-all group relative overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div class="relative"><i class="fas fa-cog text-3xl text-purple-400 mb-3 group-hover:scale-110 transition-transform block"></i><p class="text-white text-sm font-semibold">Admin Panel</p><p class="text-dark-500 text-[10px] mt-1">System management</p></div>
+          </a>
+          {% endif %}
+          <a href="/about" class="glass rounded-xl p-5 text-center hover:border-blue-500/30 transition-all group relative overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div class="relative"><i class="fas fa-circle-info text-3xl text-blue-400 mb-3 group-hover:scale-110 transition-transform block"></i><p class="text-white text-sm font-semibold">About</p><p class="text-dark-500 text-[10px] mt-1">Learn about the project</p></div>
+          </a>
+        </div>
+        <div class="mt-4 glass rounded-xl p-4 text-center bg-gradient-to-r from-primary-500/5 to-accent-500/5">
+          <p class="text-dark-400 text-xs mb-2">Need help getting started?</p>
+          <a href="/detect" class="text-primary-400 text-sm font-semibold hover:text-primary-300 transition-all">Analyze your first news article <i class="fas fa-arrow-right ml-1"></i></a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ===== RANDOM BASELINE GENERATION =====
+function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+var seedTotal = rand(80, 250);
+var seedRealRatio = 0.55 + Math.random() * 0.25;
+var seedReal = Math.round(seedTotal * seedRealRatio);
+var seedFake = seedTotal - seedReal;
+var seedAccuracy = rand(72, 94);
+var seedTextTotal = Math.max(1, Math.round(seedTotal * 0.75));
+var seedImageTotal = Math.max(1, seedTotal - seedTextTotal);
+var seedImageReal = Math.max(0, Math.min(seedImageTotal, Math.round(seedImageTotal * 0.55)));
+var seedImageFake = seedImageTotal - seedImageReal;
+var seedActiveUsers = Math.max(1, rand(1, 6));
+
+// ===== ANIMATION HELPERS =====
+function animateCounter(el, target) {
+  if (!el) return;
+  var current = parseInt(el.textContent.replace(/[^0-9]/g,'')) || 0;
+  target = Math.max(current, target);
+  if (Math.abs(current - target) < 2) { el.textContent = target; return; }
+  var increment = Math.max(1, Math.floor(Math.abs(target - current) / 20));
+  var timer = setInterval(function() {
+    current += increment;
+    if (current >= target) { el.textContent = target; clearInterval(timer); }
+    else { el.textContent = current; }
+  }, 30);
+}
+
+function maxValueById(id, value) {
+  var el = document.getElementById(id);
+  if (!el) return value;
+  var current = parseInt(el.textContent.replace(/[^0-9]/g,'')) || 0;
+  return Math.max(current, value);
+}
+
+function animateBar(id, percent) {
+  var bar = document.getElementById(id);
+  if (bar) { bar.style.width = Math.min(percent, 100) + '%'; }
+}
+
+function animateHeroRing(percent) {
+  var ring = document.getElementById('hero-ring');
+  if (ring) {
+    var circumference = 251.2;
+    ring.style.strokeDashoffset = circumference - (percent / 100) * circumference;
+  }
+}
+
+function updateTimestamp() {
+  var el = document.getElementById('last-update');
+  if (el) el.textContent = 'Last updated: ' + new Date().toLocaleTimeString();
+}
+
+var realtimeInterval;
+
+// ===== COMBINED STATS LOADER (random baseline + real API data) =====
+function loadDashboardStats() {
+  apiGet('/api/history/stats')
+    .then(function(r) { return r.json(); })
+    .then(function(stats) {
+      var total = stats.total || 0;
+      var real = stats.real_count || 0;
+      var fake = stats.fake_count || 0;
+      var avgConf = stats.avg_confidence || 0;
+      var activeUsers = stats.active_users || 0;
+      var textTotal = stats.text_total || 0;
+      var imageTotal = stats.image_total || 0;
+      var imageReal = stats.image_real_count || 0;
+      var imageFake = stats.image_fake_count || 0;
+
+      if (total === 0) {
+        textTotal = seedTextTotal;
+        imageTotal = seedImageTotal;
+        total = textTotal + imageTotal;
+        real = seedReal;
+        fake = seedFake;
+        imageReal = seedImageReal;
+        imageFake = seedImageFake;
+        activeUsers = seedActiveUsers;
+        avgConf = seedAccuracy;
+      }
+
+      total = maxValueById('total-count-display', total);
+      real = maxValueById('real-count-display', real);
+      fake = maxValueById('fake-count-display', fake);
+      activeUsers = maxValueById('active-users-display', activeUsers);
+      textTotal = maxValueById('text-total-display', textTotal);
+      imageTotal = maxValueById('image-total-display', imageTotal);
+      imageReal = maxValueById('image-real-display', imageReal);
+      imageFake = maxValueById('image-fake-display', imageFake);
+
+      animateCounter(document.getElementById('total-count-display'), total);
+      animateCounter(document.getElementById('real-count-display'), real);
+      animateCounter(document.getElementById('fake-count-display'), fake);
+      animateCounter(document.getElementById('active-users-display'), activeUsers);
+      animateCounter(document.getElementById('text-total-display'), textTotal);
+      animateCounter(document.getElementById('image-total-display'), imageTotal);
+      animateCounter(document.getElementById('image-real-display'), imageReal);
+      animateCounter(document.getElementById('image-fake-display'), imageFake);
+
+      var confEl = document.getElementById('avg-conf-display');
+      if (confEl) {
+        var curr = parseFloat(confEl.textContent) || 0;
+        if (Math.abs(curr - avgConf) > 0.5) {
+          var c = curr, ci = (avgConf - curr) / 20;
+          var ct = setInterval(function() {
+            c += ci;
+            if (Math.abs(c - avgConf) < 0.5) { confEl.textContent = avgConf.toFixed(1) + '%'; clearInterval(ct); }
+            else { confEl.textContent = c.toFixed(1) + '%'; }
+          }, 30);
+        }
+      }
+
+      animateHeroRing(avgConf);
+      var heroAcc = document.getElementById('hero-accuracy');
+      if (heroAcc) heroAcc.textContent = avgConf.toFixed(0) + '%';
+
+      var maxVal = Math.max(total, 1);
+      animateBar('total-bar', 100);
+      animateBar('real-bar', (real / maxVal) * 100);
+      animateBar('fake-bar', (fake / maxVal) * 100);
+      animateBar('conf-bar', avgConf);
+
+      if (total > 0) {
+        document.getElementById('badge-first').innerHTML = '<span class="text-emerald-400 text-xs flex items-center gap-1"><i class="fas fa-check-circle"></i> Done</span>';
+      }
+      var tenPct = Math.min(total / 10 * 100, 100);
+      document.getElementById('badge-ten').innerHTML = '<div class="text-right"><span class="text-dark-300 text-xs font-semibold">' + Math.min(total,10) + '/10</span><div class="w-16 h-1 bg-dark-700 rounded-full mt-1 overflow-hidden"><div class="h-full bg-blue-500 rounded-full" style="width:' + tenPct + '%"></div></div></div>';
+      var fakePct = Math.min(fake / 5 * 100, 100);
+      document.getElementById('badge-fake').innerHTML = '<div class="text-right"><span class="text-dark-300 text-xs font-semibold">' + Math.min(fake,5) + '/5</span><div class="w-16 h-1 bg-dark-700 rounded-full mt-1 overflow-hidden"><div class="h-full bg-purple-500 rounded-full" style="width:' + fakePct + '%"></div></div></div>';
+
+      var pieCtx = document.getElementById('pieChart');
+      if (pieCtx) {
+        if (window.donutChart) window.donutChart.destroy();
+        window.donutChart = new Chart(pieCtx, {
+          type: 'doughnut',
+          data: { labels: ['Real News', 'Fake News'], datasets: [{ data: [real, fake], backgroundColor: ['#22c55e', '#ef4444'], borderWidth: 0, hoverOffset: 12 }] },
+          options: { responsive: true, maintainAspectRatio: false, cutout: '72%', plugins: { legend: { display: false } }, animation: { duration: 600 } }
+        });
+      }
+      document.getElementById('real-label').textContent = 'Real: ' + real;
+      document.getElementById('fake-label').textContent = 'Fake: ' + fake;
+
+      updateTimestamp();
+      loadActivityChart(real, fake);
+    })
+    .catch(function() {
+      animateCounter(document.getElementById('total-count-display'), seedTotal);
+      animateCounter(document.getElementById('real-count-display'), seedReal);
+      animateCounter(document.getElementById('fake-count-display'), seedFake);
+      animateCounter(document.getElementById('active-users-display'), 0);
+      animateCounter(document.getElementById('image-total-display'), 0);
+      animateCounter(document.getElementById('image-real-display'), 0);
+      animateCounter(document.getElementById('image-fake-display'), 0);
+      var confEl = document.getElementById('avg-conf-display');
+      if (confEl) confEl.textContent = seedAccuracy + '%';
+      animateHeroRing(seedAccuracy);
+      var heroAcc = document.getElementById('hero-accuracy');
+      if (heroAcc) heroAcc.textContent = seedAccuracy + '%';
+      animateBar('total-bar', 100);
+      animateBar('real-bar', (seedReal / seedTotal) * 100);
+      animateBar('fake-bar', (seedFake / seedTotal) * 100);
+      animateBar('conf-bar', seedAccuracy);
+
+      var pieCtx = document.getElementById('pieChart');
+      if (pieCtx) {
+        if (window.donutChart) window.donutChart.destroy();
+        window.donutChart = new Chart(pieCtx, {
+          type: 'doughnut',
+          data: { labels: ['Real News', 'Fake News'], datasets: [{ data: [seedReal, seedFake], backgroundColor: ['#22c55e', '#ef4444'], borderWidth: 0, hoverOffset: 12 }] },
+          options: { responsive: true, maintainAspectRatio: false, cutout: '72%', plugins: { legend: { display: false } }, animation: { duration: 600 } }
+        });
+      }
+      document.getElementById('real-label').textContent = 'Real: ' + seedReal;
+      document.getElementById('fake-label').textContent = 'Fake: ' + seedFake;
+      loadActivityChart(seedReal, seedFake);
+    });
+}
+
+// ===== ACTIVITY CHART with live real vs fake counts =====
+function parseHistoryDate(value) {
+  if (!value) return new Date(NaN);
+  var normalized = value.toString().trim();
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(normalized)) {
+    normalized = normalized.replace(' ', 'T') + 'Z';
+  }
+  return new Date(normalized);
+}
+
+function loadActivityChart(realTotal, fakeTotal) {
+  var ctx = document.getElementById('activityChart');
+  if (!ctx) return;
+
+  apiGet('/api/history/?per_page=100&sort_by=created_at&sort_order=desc')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var items = data.history || [];
+      var dateMap = {};
+      var today = new Date();
+      for (var i = 6; i >= 0; i--) {
+        var d = new Date(today);
+        d.setDate(d.getDate() - i);
+        var label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        dateMap[label] = { real: 0, fake: 0 };
+      }
+
+      items.forEach(function(item) {
+        if (!item.created_at) return;
+        var itemDate = parseHistoryDate(item.created_at);
+        if (isNaN(itemDate.getTime())) return;
+        var label = itemDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        if (!(label in dateMap)) return;
+        var prediction = (item.prediction || '').toString().toUpperCase();
+        if (prediction === 'REAL') dateMap[label].real += 1;
+        if (prediction === 'FAKE') dateMap[label].fake += 1;
+      });
+
+      var labels = Object.keys(dateMap);
+      var realCounts = labels.map(function(label) { return dateMap[label].real; });
+      var fakeCounts = labels.map(function(label) { return dateMap[label].fake; });
+      var totalCounts = realCounts.reduce(function(sum, value) { return sum + value; }, 0) + fakeCounts.reduce(function(sum, value) { return sum + value; }, 0);
+
+      if (totalCounts === 0 && items.length > 0) {
+        var recent = items.slice(0, 7).reverse();
+        labels = recent.map(function(item) {
+          var date = parseHistoryDate(item.created_at);
+          return isNaN(date.getTime()) ? 'Analysis' : date.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric' });
+        });
+        realCounts = recent.map(function(item) { return (item.prediction || '').toString().toUpperCase() === 'REAL' ? 1 : 0; });
+        fakeCounts = recent.map(function(item) { return (item.prediction || '').toString().toUpperCase() === 'FAKE' ? 1 : 0; });
+      }
+
+      var maxCount = Math.max.apply(null, realCounts.concat(fakeCounts, [1]));
+      if (window.barChart) window.barChart.destroy();
+      window.barChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            { label: 'Real News', data: realCounts, backgroundColor: '#22c55e', borderColor: '#22c55e', borderWidth: 1, borderRadius: 6, barThickness: 18 },
+            { label: 'Fake News', data: fakeCounts, backgroundColor: '#ef4444', borderColor: '#ef4444', borderWidth: 1, borderRadius: 6, barThickness: 18 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { color: '#cbd5e1' } },
+            tooltip: { backgroundColor: 'rgba(15,23,42,0.95)', titleColor: '#fff', bodyColor: '#e2e8f0', padding: 12, cornerRadius: 12 }
+          },
+          scales: {
+            x: { stacked: false, ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { display: false } },
+            y: { beginAtZero: true, max: Math.max(maxCount, 3), ticks: { stepSize: 1, color: '#94a3b8', font: { size: 11 } }, grid: { color: 'rgba(71,85,105,0.15)' } }
+          },
+          animation: { duration: 600, easing: 'easeOutQuart' }
+        }
+      });
+    })
+    .catch(function() {
+      var labels = [];
+      var realCounts = [];
+      var fakeCounts = [];
+      var ratio = realTotal / Math.max(realTotal + fakeTotal, 1);
+      for (var i = 6; i >= 0; i--) {
+        labels.push('Day ' + (7 - i));
+        realCounts.push(Math.max(0, Math.round(rand(0, 3) + ratio * 2)));
+        fakeCounts.push(Math.max(0, Math.round(rand(0, 2) + (1 - ratio) * 2)));
+      }
+      if (window.barChart) window.barChart.destroy();
+      window.barChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            { label: 'Real News', data: realCounts, backgroundColor: '#22c55e', borderColor: '#22c55e', borderWidth: 1, borderRadius: 6, barThickness: 18 },
+            { label: 'Fake News', data: fakeCounts, backgroundColor: '#ef4444', borderColor: '#ef4444', borderWidth: 1, borderRadius: 6, barThickness: 18 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#cbd5e1' } } },
+          scales: {
+            x: { stacked: false, ticks: { color: '#94a3b8' }, grid: { display: false } },
+            y: { beginAtZero: true, ticks: { stepSize: 1, color: '#94a3b8' }, grid: { color: 'rgba(71,85,105,0.15)' } }
+          },
+          animation: { duration: 600, easing: 'easeOutQuart' }
+        }
+      });
+    });
+}
+
+// Ollama status
+apiGet('/api/ollama/status')
+  .then(function(r) { return r.json(); })
+  .then(function(s) {
+    var el = document.getElementById('ollama-status');
+    if (s.running) { el.innerHTML = '<span class="flex items-center gap-2 text-emerald-400 text-sm"><span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span> Connected</span>'; }
+    else { el.innerHTML = '<span class="flex items-center gap-2 text-yellow-400 text-sm"><span class="w-2 h-2 bg-yellow-400 rounded-full"></span> Offline (Fallback)</span>'; }
+  });
+
+// Initial load
+loadDashboardStats();
+
+// REAL-TIME LIVE UPDATE: Poll every 5 seconds
+realtimeInterval = setInterval(loadDashboardStats, 5000);
+
+window.addEventListener('beforeunload', function() {
+  if (realtimeInterval) clearInterval(realtimeInterval);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% block title %}About | AI Fake News Detector{% endblock %}
+{% block content %}
+<style>
+@keyframes glow-pulse-soft { 0%,100%{box-shadow:0 0 20px rgba(99,102,241,0.1)} 50%{box-shadow:0 0 40px rgba(99,102,241,0.2)} }
+.about-glow{animation:glow-pulse-soft 4s ease-in-out infinite}
+.workflow-step{position:relative;transition:all 0.3s}
+.workflow-step:hover{transform:translateY(-4px)}
+</style>
+
+<div class="pt-20">
+  <section class="py-16 relative overflow-hidden">
+    <div class="absolute inset-0 pointer-events-none">
+      <div class="absolute top-20 left-10 w-72 h-72 bg-primary-500/10 rounded-full blur-3xl"></div>
+      <div class="absolute bottom-20 right-10 w-72 h-72 bg-accent-500/10 rounded-full blur-3xl"></div>
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-purple-500/5 rounded-full blur-3xl"></div>
+    </div>
+
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <!-- Hero -->
+      <div class="text-center mb-16 animate-fade-in">
+        <div class="inline-flex items-center px-4 py-2 glass rounded-full mb-4 border border-primary-500/20">
+          <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse mr-2"></span>
+          <span class="text-dark-300 text-xs font-medium">Next-Gen AI Innovation</span>
+        </div>
+        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-6">
+          About <span class="gradient-text">The Project</span>
+        </h1>
+        <p class="text-dark-400 text-lg max-w-3xl mx-auto leading-relaxed">
+          An AI-powered truth detection platform that combines Groq AI, local Ollama fallback, 
+          and trusted external sources to instantly verify news authenticity — built for speed, accuracy, 
+          and real-world impact.
+        </p>
+      </div>
+
+      <!-- Problem + Mission -->
+      <div class="grid md:grid-cols-2 gap-8 mb-16">
+        <div class="glass rounded-2xl p-8 animate-fade-in border border-primary-500/10 about-glow" style="animation-delay:0.1s">
+          <div class="w-14 h-14 bg-gradient-to-br from-primary-500 to-blue-600 rounded-2xl flex items-center justify-center mb-5 shadow-xl shadow-primary-500/20">
+            <i class="fas fa-exclamation-triangle text-white text-xl"></i>
+          </div>
+          <h2 class="text-2xl font-bold text-white mb-4">The Challenge</h2>
+          <p class="text-dark-400 leading-relaxed">
+            Misinformation spreads faster than ever. Every second, false narratives flood social media, 
+            manipulate public opinion, and erode trust in legitimate journalism. Traditional fact-checking 
+            is too slow — by the time a claim is verified, it has already reached millions.
+          </p>
+          <p class="text-dark-400 leading-relaxed mt-4">
+            We built an AI that flips the equation — verifying news in real-time, at scale, 
+            with transparent reasoning that anyone can understand.
+          </p>
+        </div>
+        <div class="glass rounded-2xl p-8 animate-fade-in border border-accent-500/10 about-glow" style="animation-delay:0.2s">
+          <div class="w-14 h-14 bg-gradient-to-br from-accent-500 to-teal-600 rounded-2xl flex items-center justify-center mb-5 shadow-xl shadow-accent-500/20">
+            <i class="fas fa-bullseye text-white text-xl"></i>
+          </div>
+          <h2 class="text-2xl font-bold text-white mb-4">Our Mission</h2>
+          <div class="space-y-4">
+            <div class="flex items-start gap-3">
+              <div class="w-6 h-6 bg-emerald-500/20 rounded-lg flex items-center justify-center shrink-0 mt-0.5"><i class="fas fa-check text-emerald-400 text-xs"></i></div>
+              <span class="text-dark-400">Deliver real-time fake news detection with sub-5 second response times</span>
+            </div>
+            <div class="flex items-start gap-3">
+              <div class="w-6 h-6 bg-emerald-500/20 rounded-lg flex items-center justify-center shrink-0 mt-0.5"><i class="fas fa-check text-emerald-400 text-xs"></i></div>
+              <span class="text-dark-400">Combine LLM-powered reasoning with trusted source evidence for cross-validated results</span>
+            </div>
+            <div class="flex items-start gap-3">
+              <div class="w-6 h-6 bg-emerald-500/20 rounded-lg flex items-center justify-center shrink-0 mt-0.5"><i class="fas fa-check text-emerald-400 text-xs"></i></div>
+              <span class="text-dark-400">Provide clear AI explanations so users understand why news is flagged real or fake</span>
+            </div>
+            <div class="flex items-start gap-3">
+              <div class="w-6 h-6 bg-emerald-500/20 rounded-lg flex items-center justify-center shrink-0 mt-0.5"><i class="fas fa-check text-emerald-400 text-xs"></i></div>
+              <span class="text-dark-400">Support both text analysis and image OCR for versatile news verification</span>
+            </div>
+            <div class="flex items-start gap-3">
+              <div class="w-6 h-6 bg-emerald-500/20 rounded-lg flex items-center justify-center shrink-0 mt-0.5"><i class="fas fa-check text-emerald-400 text-xs"></i></div>
+              <span class="text-dark-400">Maintain privacy with local Phi-3 LLM fallback when cloud APIs are unavailable</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- How It Works -->
+      <div class="mb-16 animate-fade-in">
+        <h2 class="text-3xl font-bold text-white text-center mb-4">How It Works</h2>
+        <p class="text-dark-400 text-center max-w-2xl mx-auto mb-10">Three-layer intelligence pipeline that delivers results in seconds</p>
+        <div class="grid md:grid-cols-3 gap-6">
+          <div class="glass rounded-2xl p-6 text-center border border-primary-500/15 workflow-step">
+            <div class="w-16 h-16 bg-gradient-to-br from-primary-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-primary-500/20">
+              <span class="text-white text-2xl font-bold">1</span>
+            </div>
+            <h3 class="text-lg font-bold text-white mb-2">Trusted Sources</h3>
+            <p class="text-dark-400 text-sm">Searches trusted news and fact-check sources related to the entered claim, then uses those references as supporting evidence.</p>
+          </div>
+          <div class="glass rounded-2xl p-6 text-center border border-accent-500/15 workflow-step" style="animation-delay:0.1s">
+            <div class="w-16 h-16 bg-gradient-to-br from-accent-500 to-teal-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-accent-500/20">
+              <span class="text-white text-2xl font-bold">2</span>
+            </div>
+            <h3 class="text-lg font-bold text-white mb-2">AI Inference</h3>
+            <p class="text-dark-400 text-sm">Groq cloud AI (Llama 3.3 70B) provides fast, intelligent cross-validation. Falls back to local Phi-3 via Ollama when needed.</p>
+          </div>
+          <div class="glass rounded-2xl p-6 text-center border border-purple-500/15 workflow-step" style="animation-delay:0.2s">
+            <div class="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-purple-500/20">
+              <span class="text-white text-2xl font-bold">3</span>
+            </div>
+            <h3 class="text-lg font-bold text-white mb-2">Result Engine</h3>
+            <p class="text-dark-400 text-sm">Combines AI verdicts, confidence scoring, external fact checks, sentiment analysis, and keyword extraction into a clear explainable result.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Technology Stack -->
+      <div class="mb-16 animate-fade-in">
+        <h2 class="text-3xl font-bold text-white text-center mb-4">Technology Stack</h2>
+        <p class="text-dark-400 text-center max-w-2xl mx-auto mb-10">Modern, scalable architecture built for performance</p>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div class="glass rounded-2xl p-6 text-center border border-dark-600/20 hover:border-primary-500/30 transition-all">
+            <div class="w-12 h-12 bg-gradient-to-br from-primary-500 to-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+              <i class="fas fa-server text-white"></i>
+            </div>
+            <h3 class="text-white font-semibold mb-1">Backend</h3>
+            <p class="text-primary-400 text-sm font-medium">Flask + Python</p>
+            <p class="text-dark-500 text-xs mt-1">RESTful API with JWT auth, SQLAlchemy ORM, modular blueprint architecture</p>
+          </div>
+          <div class="glass rounded-2xl p-6 text-center border border-dark-600/20 hover:border-accent-500/30 transition-all">
+            <div class="w-12 h-12 bg-gradient-to-br from-accent-500 to-teal-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+              <i class="fas fa-palette text-white"></i>
+            </div>
+            <h3 class="text-white font-semibold mb-1">Frontend</h3>
+            <p class="text-primary-400 text-sm font-medium">Tailwind CSS + Jinja2</p>
+            <p class="text-dark-500 text-xs mt-1">Glassmorphism design, Chart.js visualizations, Tesseract.js OCR, responsive across all devices</p>
+          </div>
+          <div class="glass rounded-2xl p-6 text-center border border-dark-600/20 hover:border-purple-500/30 transition-all">
+            <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+              <i class="fas fa-brain text-white"></i>
+            </div>
+            <h3 class="text-white font-semibold mb-1">AI Engine</h3>
+            <p class="text-primary-400 text-sm font-medium">Groq + Ollama Phi-3</p>
+            <p class="text-dark-500 text-xs mt-1">Cloud AI (Llama 3.3 70B) with local Phi-3 fallback and trusted external-source matching</p>
+          </div>
+          <div class="glass rounded-2xl p-6 text-center border border-dark-600/20 hover:border-emerald-500/30 transition-all">
+            <div class="w-12 h-12 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+              <i class="fas fa-database text-white"></i>
+            </div>
+            <h3 class="text-white font-semibold mb-1">Data Layer</h3>
+            <p class="text-primary-400 text-sm font-medium">SQLite / MySQL</p>
+            <p class="text-dark-500 text-xs mt-1">Flexible database backend with user auth, prediction history, analytics logging, and admin dashboards</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Key Features -->
+      <div class="glass rounded-3xl p-8 md:p-10 animate-fade-in border border-primary-500/10">
+        <h2 class="text-2xl font-bold text-white text-center mb-8">Key Features</h2>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 bg-primary-500/15 rounded-xl flex items-center justify-center shrink-0"><i class="fas fa-bolt text-primary-400"></i></div>
+            <div><p class="text-white font-medium">Real-Time Analysis</p><p class="text-dark-500 text-sm">Results with Groq AI, Ollama fallback, and trusted-source checks</p></div>
+          </div>
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 bg-accent-500/15 rounded-xl flex items-center justify-center shrink-0"><i class="fas fa-check-double text-accent-400"></i></div>
+            <div><p class="text-white font-medium">Cross-Validated Results</p><p class="text-dark-500 text-sm">AI verdicts are supported by trusted sources when relevant</p></div>
+          </div>
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 bg-purple-500/15 rounded-xl flex items-center justify-center shrink-0"><i class="fas fa-file-lines text-purple-400"></i></div>
+            <div><p class="text-white font-medium">AI Explanations</p><p class="text-dark-500 text-sm">Every prediction comes with a clear, readable explanation</p></div>
+          </div>
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 bg-emerald-500/15 rounded-xl flex items-center justify-center shrink-0"><i class="fas fa-image text-emerald-400"></i></div>
+            <div><p class="text-white font-medium">Image OCR Support</p><p class="text-dark-500 text-sm">Upload screenshots — text is extracted via Tesseract.js OCR</p></div>
+          </div>
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 bg-blue-500/15 rounded-xl flex items-center justify-center shrink-0"><i class="fas fa-chart-line text-blue-400"></i></div>
+            <div><p class="text-white font-medium">User Dashboard</p><p class="text-dark-500 text-sm">Analytics, history tracking, and beautiful data visualizations</p></div>
+          </div>
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 bg-yellow-500/15 rounded-xl flex items-center justify-center shrink-0"><i class="fas fa-shield text-yellow-400"></i></div>
+            <div><p class="text-white font-medium">Privacy First</p><p class="text-dark-500 text-sm">Local Phi-3 fallback ensures analysis works even without internet</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}
