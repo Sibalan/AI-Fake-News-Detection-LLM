@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Admin Sign In — AI Fake News Detector</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',system-ui,sans-serif;background:#020617;color:#e2e8f0;min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-20px)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes gradShift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+.gradient-text{background:linear-gradient(135deg,#818cf8,#a78bfa,#e879f9);background-size:200% 200%;animation:gradShift 4s ease infinite;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.glass{background:rgba(15,23,42,0.75);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(51,65,85,0.4)}
+.form-input{width:100%;background:rgba(30,41,59,0.6);border:1px solid rgba(51,65,85,0.4);border-radius:0.75rem;padding:0.75rem 1rem 0.75rem 2.75rem;color:#e2e8f0;font-size:0.9rem;outline:none;transition:all 0.2s}
+.form-input:focus{border-color:rgba(99,102,241,0.5);box-shadow:0 0 0 3px rgba(99,102,241,0.08)}
+.form-input::placeholder{color:#475569}
+.btn-admin{width:100%;padding:0.8rem;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;font-weight:700;font-size:0.9rem;border:none;border-radius:0.75rem;cursor:pointer;transition:all 0.25s;letter-spacing:.02em}
+.btn-admin:hover{background:linear-gradient(135deg,#818cf8,#6366f1);box-shadow:0 8px 25px rgba(99,102,241,0.4);transform:translateY(-1px)}
+.btn-admin:active{transform:translateY(0)}
+.alert-error{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#fca5a5;padding:.75rem 1rem;border-radius:.6rem;font-size:.82rem;display:flex;align-items:center;gap:.6rem}
+.alert-success{background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);color:#86efac;padding:.75rem 1rem;border-radius:.6rem;font-size:.82rem;display:flex;align-items:center;gap:.6rem}
+.glow-orb{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none}
+</style>
+</head>
+<body>
+<!-- Background orbs -->
+<div class="glow-orb" style="width:420px;height:420px;background:rgba(99,102,241,0.07);top:-100px;left:-100px"></div>
+<div class="glow-orb" style="width:350px;height:350px;background:rgba(139,92,246,0.06);bottom:-80px;right:-80px"></div>
+
+<div class="w-full max-w-md px-4" style="animation:fadeUp .5s ease">
+  <div class="glass rounded-2xl p-8 shadow-2xl">
+
+    <!-- Logo + title -->
+    <div class="text-center mb-8">
+      <div class="w-16 h-16 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-indigo-500/30" style="animation:float 3s ease-in-out infinite">
+        <i class="fas fa-shield-halved text-white text-xl"></i>
+      </div>
+      <h1 class="text-2xl font-extrabold text-white mb-1">Admin <span class="gradient-text">Sign In</span></h1>
+      <p class="text-slate-500 text-sm">Restricted to administrators only</p>
+    </div>
+
+    <!-- Admin badge -->
+    <div class="flex items-center gap-2 justify-center mb-6 px-3 py-2 rounded-xl" style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2)">
+      <i class="fas fa-lock text-indigo-400 text-xs"></i>
+      <span class="text-indigo-300 text-xs font-medium">Admin credentials required · Regular accounts cannot access this panel</span>
+    </div>
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="{{ 'alert-success' if category == 'success' else 'alert-error' }} mb-4">
+            <i class="fas {{ 'fa-circle-check' if category == 'success' else 'fa-triangle-exclamation' }}"></i>
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- Form -->
+    <form method="POST" action="/admin-login" autocomplete="off">
+      <div class="space-y-4">
+
+        <div class="relative">
+          <i class="fas fa-user absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-sm pointer-events-none"></i>
+          <input type="text" name="username" placeholder="Admin username or email"
+            class="form-input" value="{{ form_data.username if form_data else '' }}" required autofocus />
+        </div>
+
+        <div class="relative">
+          <i class="fas fa-lock absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-sm pointer-events-none"></i>
+          <input type="password" name="password" id="pwd" placeholder="Admin password"
+            class="form-input" style="padding-right:3rem" required />
+          <button type="button" onclick="togglePwd()" class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors">
+            <i class="fas fa-eye text-sm" id="eye-icon"></i>
+          </button>
+        </div>
+
+        <button type="submit" class="btn-admin mt-2">
+          <i class="fas fa-right-to-bracket mr-2"></i>Sign In as Admin
+        </button>
+
+      </div>
+    </form>
+
+    <!-- Back links -->
+    <div class="flex items-center justify-between mt-6 pt-5 border-t border-slate-800">
+      <a href="/login" class="text-slate-500 hover:text-slate-300 text-xs transition-colors flex items-center gap-1.5">
+        <i class="fas fa-user"></i> Regular Sign In
+      </a>
+      <a href="/" class="text-slate-500 hover:text-slate-300 text-xs transition-colors flex items-center gap-1.5">
+        <i class="fas fa-house"></i> Back to Site
+      </a>
+    </div>
+
+  </div>
+
+  <p class="text-center text-slate-700 text-xs mt-5">AI Fake News Detector · Admin Portal · Restricted Access</p>
+</div>
+
+<script>
+function togglePwd() {
+  var pwd = document.getElementById('pwd');
+  var icon = document.getElementById('eye-icon');
+  if (pwd.type === 'password') {
+    pwd.type = 'text';
+    icon.className = 'fas fa-eye-slash text-sm';
+  } else {
+    pwd.type = 'password';
+    icon.className = 'fas fa-eye text-sm';
+  }
+}
+</script>
+</body>
+</html>

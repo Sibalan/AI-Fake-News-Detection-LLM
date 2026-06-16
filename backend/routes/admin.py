@@ -42,9 +42,18 @@ def admin_required(f):
     return decorated
 
 
-def log_admin_action(admin_id, action, details=None, ip=None):
+def log_admin_action(admin_id, action, details=None, ip=None, module=None):
+    if not action or not str(action).strip():
+        logger.warning("log_admin_action: action cannot be empty")
+        return
     try:
-        log = AdminLog(admin_id=admin_id, action=action, details=details, ip_address=ip)
+        log = AdminLog(
+            admin_id=admin_id,
+            action=str(action).strip()[:255],
+            details=details,
+            module=module,
+            ip_address=ip,
+        )
         db.session.add(log)
         db.session.commit()
     except Exception as e:
@@ -358,6 +367,41 @@ def clear_history(admin_id):
         logger.error(f"Clear history error: {e}")
         db.session.rollback()
         return jsonify({"error": "Failed to clear history"}), 500
+
+
+@admin_bp.route("/logs/<int:log_id>", methods=["DELETE"])
+@admin_required
+def delete_admin_log(admin_id, log_id):
+    try:
+        log = AdminLog.query.get(log_id)
+        if not log:
+            return jsonify({"error": "Log entry not found"}), 404
+        db.session.delete(log)
+        db.session.commit()
+        return jsonify({"message": f"Log #{log_id} deleted"}), 200
+    except Exception as e:
+        logger.error(f"Delete admin log error: {e}")
+        db.session.rollback()
+        return jsonify({"error": "Failed to delete log"}), 500
+
+
+@admin_bp.route("/logs", methods=["POST"])
+@admin_required
+def create_admin_log(admin_id):
+    data = request.get_json() or {}
+    action = (data.get("action") or "").strip()
+    if not action:
+        return jsonify({"error": "Action is required"}), 400
+    if len(action) < 3:
+        return jsonify({"error": "Action must be at least 3 characters"}), 400
+    log_admin_action(
+        admin_id,
+        action,
+        details=data.get("details", ""),
+        ip=request.remote_addr,
+        module=data.get("module", ""),
+    )
+    return jsonify({"message": "Log entry created"}), 201
 
 
 @admin_bp.route("/stats/methods", methods=["GET"])

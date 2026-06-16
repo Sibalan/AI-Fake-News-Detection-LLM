@@ -1,444 +1,504 @@
 {% extends "base.html" %}
-{% block title %}Detect News | AI Fake News Detector{% endblock %}
+{% block title %}Detect Fake News | AI Fake News Detector{% endblock %}
 {% block content %}
 <style>
-@keyframes border-glow { 0%,100%{border-color:rgba(99,102,241,0.3);box-shadow:0 0 20px rgba(99,102,241,0.1)} 50%{border-color:rgba(99,102,241,0.6);box-shadow:0 0 40px rgba(99,102,241,0.2)} }
-@keyframes scan-down { 0%{top:-2px} 100%{top:100%} }
-@keyframes float-particle { 0%,100%{transform:translateY(0)translateX(0)} 25%{transform:translateY(-20px)translateX(10px)} 50%{transform:translateY(-10px)translateX(-5px)} 75%{transform:translateY(-25px)translateX(8px)} }
-@keyframes conf-fill { from{stroke-dashoffset:251.2} }
-@keyframes glow-pulse { 0%,100%{box-shadow:0 0 10px rgba(99,102,241,0.1)} 50%{box-shadow:0 0 25px rgba(99,102,241,0.2)} }
-@keyframes step-glow { 0%,100%{box-shadow:0 0 5px rgba(99,102,241,0.2)} 50%{box-shadow:0 0 20px rgba(99,102,241,0.5)} }
-.particle{position:absolute;width:3px;height:3px;border-radius:50%;animation:float-particle 10s ease-in-out infinite}
-.drop-zone{border:2px dashed rgba(71,85,105,0.5);border-radius:1rem;transition:all 0.4s;cursor:pointer;position:relative;overflow:hidden}
-.drop-zone:hover{border-color:rgba(20,184,166,0.4);background:rgba(20,184,166,0.03)}
-.drop-zone.active{border-color:rgba(20,184,166,0.6);background:rgba(20,184,166,0.06);animation:border-glow 2s ease-in-out infinite}
-.scan-line{position:absolute;left:10%;right:10%;height:2px;background:linear-gradient(90deg,transparent,rgba(20,184,166,0.8),transparent);animation:scan-down 1.5s linear infinite}
-.glow-card{position:relative;overflow:hidden;border-radius:1rem;transition:all 0.4s}
-.step-indicator{display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;border-radius:0.75rem;transition:all 0.4s;font-size:0.75rem}
-.step-indicator .dot{width:10px;height:10px;border-radius:50%;transition:all 0.3s}
-.step-indicator.pending{color:#64748b}
-.step-indicator.pending .dot{background:#334155}
-.step-indicator.active{color:#818cf8;background:rgba(99,102,241,0.08);animation:step-glow 1.5s ease-in-out infinite}
-.step-indicator.active .dot{background:#818cf8;box-shadow:0 0 10px rgba(99,102,241,0.5)}
-.step-indicator.done{color:#34d399}
-.step-indicator.done .dot{background:#34d399}
-.loading-dots::after{content:'';animation:dots 1.5s steps(4,end) infinite}
-@keyframes dots{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}100%{content:''}}
+@keyframes border-glow{0%,100%{box-shadow:0 0 15px rgba(99,102,241,.1)}50%{box-shadow:0 0 30px rgba(99,102,241,.25)}}
+@keyframes scan-down{0%{top:-2px}100%{top:100%}}
+@keyframes step-glow{0%,100%{box-shadow:0 0 5px rgba(99,102,241,.2)}50%{box-shadow:0 0 18px rgba(99,102,241,.5)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes confFill{from{stroke-dashoffset:251.2}}
+@keyframes wordFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes pulse-live{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ─── Tabs ───────────────────────────────────────────────── */
+.tab-btn{display:flex;align-items:center;gap:.5rem;padding:.6rem 1.25rem;border-radius:.75rem;border:1px solid rgba(51,65,85,.5);font-size:.82rem;font-weight:600;color:#64748b;background:rgba(15,23,42,.5);cursor:pointer;transition:all .2s;white-space:nowrap}
+.tab-btn:hover{border-color:rgba(99,102,241,.4);color:#a5b4fc}
+.tab-btn.active{background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;border-color:transparent;box-shadow:0 4px 16px rgba(99,102,241,.35)}
+.tab-panel{display:none}.tab-panel.active{display:block;animation:fadeUp .3s ease}
+
+/* ─── Input cards ────────────────────────────────────────── */
+.input-card{background:rgba(15,23,42,.65);border:1px solid rgba(51,65,85,.4);border-radius:1.25rem;padding:1.75rem;transition:border-color .3s;animation:border-glow 4s ease-in-out infinite}
+.drop-zone{border:2px dashed rgba(71,85,105,.5);border-radius:1rem;transition:all .4s;cursor:pointer;position:relative;overflow:hidden}
+.drop-zone:hover,.drop-zone.active{border-color:rgba(20,184,166,.6);background:rgba(20,184,166,.04)}
+.scan-line{position:absolute;left:10%;right:10%;height:2px;background:linear-gradient(90deg,transparent,rgba(20,184,166,.8),transparent);animation:scan-down 1.5s linear infinite}
+
+/* ─── Step indicators ────────────────────────────────────── */
+.step-indicator{display:flex;align-items:center;gap:.5rem;padding:.45rem .7rem;border-radius:.6rem;transition:all .35s;font-size:.75rem}
+.step-indicator .dot{width:8px;height:8px;border-radius:50%;transition:all .3s}
+.step-indicator.pending{color:#475569}.step-indicator.pending .dot{background:#1e293b}
+.step-indicator.active{color:#818cf8;background:rgba(99,102,241,.08);animation:step-glow 1.5s ease-in-out infinite}
+.step-indicator.active .dot{background:#818cf8;box-shadow:0 0 8px rgba(99,102,241,.5)}
+.step-indicator.done{color:#34d399}.step-indicator.done .dot{background:#34d399}
+
+/* ─── Result card ────────────────────────────────────────── */
+.result-card{border-radius:1.25rem;padding:1.75rem;animation:fadeUp .4s ease;background:rgba(15,23,42,.75)}
+.conf-ring{transition:stroke-dashoffset 1.8s cubic-bezier(.4,0,.2,1);animation:confFill .1s ease forwards}
+
+/* ─── XAI reasons ────────────────────────────────────────── */
+.xai-reason{display:flex;gap:.75rem;padding:.65rem .85rem;border-radius:.75rem;background:rgba(30,41,59,.5);border:1px solid rgba(51,65,85,.3);margin-bottom:.5rem;font-size:.82rem;color:#cbd5e1;line-height:1.4}
+.xai-num{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.68rem;flex-shrink:0;margin-top:.05rem}
+
+/* ─── Keyword / tag cloud ────────────────────────────────── */
+.kw-tag{display:inline-flex;align-items:center;gap:.3rem;padding:.3rem .7rem;border-radius:2rem;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.2);color:#a5b4fc;font-size:.75rem;font-weight:500;cursor:pointer;transition:all .2s;animation:wordFloat 3s ease-in-out infinite}
+.kw-tag:hover{background:rgba(99,102,241,.2);transform:scale(1.05)}
+.susp-tag{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.25);color:#f87171}
+.susp-tag:hover{background:rgba(239,68,68,.18)}
+
+/* ─── Credibility badge ──────────────────────────────────── */
+.cred-badge{display:inline-flex;align-items:center;gap:.5rem;padding:.4rem .9rem;border-radius:2rem;font-size:.75rem;font-weight:600}
+.cred-trusted{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);color:#4ade80}
+.cred-moderate{background:rgba(234,179,8,.12);border:1px solid rgba(234,179,8,.3);color:#fbbf24}
+.cred-suspicious{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#f87171}
+
+/* ─── Sentiment bar ──────────────────────────────────────── */
+.sentiment-bar{height:8px;border-radius:4px;transition:width 1.2s ease}
+
+/* ─── Source article card ────────────────────────────────── */
+.source-card{background:rgba(30,41,59,.4);border:1px solid rgba(51,65,85,.3);border-radius:.75rem;padding:.85rem;transition:border-color .2s}
+.source-card:hover{border-color:rgba(99,102,241,.3)}
+
+/* ─── Voice button ───────────────────────────────────────── */
+.voice-btn{width:40px;height:40px;border-radius:.75rem;border:1px solid rgba(51,65,85,.45);background:rgba(15,23,42,.5);color:#64748b;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;flex-shrink:0}
+.voice-btn:hover{border-color:rgba(239,68,68,.4);color:#f87171}
+.voice-btn.recording{border-color:rgba(239,68,68,.6);color:#ef4444;background:rgba(239,68,68,.1);animation:pulse-live 1s ease-in-out infinite}
+
+/* ─── URL loading bar ────────────────────────────────────── */
+.url-progress{height:3px;background:rgba(51,65,85,.4);border-radius:2px;overflow:hidden}
+.url-progress-bar{height:100%;background:linear-gradient(90deg,#6366f1,#a78bfa,#6366f1);background-size:200%;animation:gradShift 1.5s linear infinite;width:0;transition:width .3s}
+@keyframes gradShift{0%{background-position:0% 50%}100%{background-position:200% 50%}}
 </style>
 
-<div class="pt-20 pb-12 relative min-h-screen">
+<div class="pt-6 pb-16 relative min-h-screen">
   <div class="absolute inset-0 pointer-events-none overflow-hidden">
-    <div class="absolute top-32 left-16 w-96 h-96 bg-primary-500/8 rounded-full blur-3xl"></div>
-    <div class="absolute bottom-32 right-16 w-96 h-96 bg-accent-500/8 rounded-full blur-3xl"></div>
-    {% for i in range(6) %}
-    <div class="particle" style="top:{{ 15 + (i * 14) }}%;left:{{ 8 + (i * 13) }}%;animation-delay:{{ i * 0.7 }}s;background:{{ 'rgba(99,102,241,0.2)' if i % 2 == 0 else 'rgba(20,184,166,0.2)' }}"></div>
-    {% endfor %}
+    <div class="absolute top-10 left-10 w-96 h-96 bg-indigo-500/5 rounded-full blur-3xl"></div>
+    <div class="absolute bottom-10 right-10 w-80 h-80 bg-purple-500/5 rounded-full blur-3xl"></div>
   </div>
 
-  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <!-- HEADER -->
-    <div class="text-center mb-10 animate-fade-in">
-      <div class="inline-flex items-center px-4 py-2 glass rounded-full mb-4 border border-primary-500/20">
+  <div class="relative max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
+
+    <!-- ── HEADER ──────────────────────────────────────────── -->
+    <div class="text-center mb-8" style="animation:fadeUp .4s ease">
+      <div class="inline-flex items-center px-4 py-2 glass rounded-full mb-4 border border-indigo-500/20">
         <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse mr-2"></span>
-        <span class="text-dark-300 text-xs font-medium">AI-Powered News Verification</span>
+        <span class="text-dark-300 text-xs font-medium">Multi-Model AI Fact-Checker · Groq LLM + News API + XAI</span>
       </div>
-      <h1 class="text-4xl sm:text-5xl font-extrabold text-white mb-3">
+      <h1 class="text-4xl sm:text-5xl font-extrabold text-white mb-2">
         Detect <span class="gradient-text">Fake News</span>
       </h1>
-      <p class="text-dark-400 text-lg max-w-2xl mx-auto">Enter a headline or article. Knowledge checks, Groq AI, and Phi-3 fallback produce one connected verdict.</p>
+      <p class="text-dark-400 text-base max-w-2xl mx-auto">Analyze text, URLs, or images using explainable AI with real-time news verification</p>
     </div>
 
-    <!-- TWO COLUMNS -->
-    <div class="grid lg:grid-cols-2 gap-8">
-      <!-- ===== TEXT ANALYSIS ===== -->
-      <div class="animate-fade-in" style="animation-delay:0.1s">
-        <div class="glow-card glass" style="border:1px solid rgba(99,102,241,0.2);background:rgba(30,41,59,0.45)">
-          <div class="absolute top-0 right-0 w-48 h-48 bg-primary-500/8 rounded-full blur-3xl pointer-events-none"></div>
-          <div class="absolute bottom-0 left-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl pointer-events-none"></div>
-          <div class="relative p-6 md:p-8">
-            <div class="flex items-center gap-4 mb-6">
-              <div class="w-14 h-14 bg-gradient-to-br from-primary-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-xl shadow-primary-500/25">
-                <i class="fas fa-font text-white text-xl"></i>
-              </div>
-              <div>
-                <h2 class="text-2xl font-bold text-white">Text Analysis</h2>
-                <p class="text-dark-400 text-sm">Enter news content to verify</p>
-              </div>
-            </div>
+    <!-- ── INPUT METHOD TABS ────────────────────────────────── -->
+    <div class="flex justify-center gap-2 mb-6 flex-wrap" style="animation:fadeUp .4s ease .05s both">
+      <button onclick="switchTab('text')" id="tab-text" class="tab-btn active">
+        <i class="fas fa-font text-sm"></i>Text Analysis
+      </button>
+      <button onclick="switchTab('url')" id="tab-url" class="tab-btn">
+        <i class="fas fa-link text-sm"></i>URL Analyzer
+      </button>
+      <button onclick="switchTab('image')" id="tab-image" class="tab-btn">
+        <i class="fas fa-image text-sm"></i>Image OCR
+      </button>
+    </div>
 
-            <div class="flex flex-wrap items-center gap-2 mb-5">
-              <span class="text-dark-500 text-xs font-medium uppercase tracking-wider">Try:</span>
-              <button onclick="loadSample('s1')" class="px-3 py-1.5 bg-dark-700/40 rounded-full border border-dark-600/30 text-dark-400 text-xs hover:text-white hover:border-primary-500/40 transition-all">
-                <i class="fas fa-bolt text-yellow-500/60 mr-1"></i>Breaking
-              </button>
-              <button onclick="loadSample('s2')" class="px-3 py-1.5 bg-dark-700/40 rounded-full border border-dark-600/30 text-dark-400 text-xs hover:text-white hover:border-primary-500/40 transition-all">
-                <i class="fas fa-flask text-blue-500/60 mr-1"></i>Scientific
-              </button>
-              <button onclick="loadSample('s3')" class="px-3 py-1.5 bg-dark-700/40 rounded-full border border-dark-600/30 text-dark-400 text-xs hover:text-white hover:border-primary-500/40 transition-all">
-                <i class="fas fa-skull text-red-500/60 mr-1"></i>Clickbait
-              </button>
-            </div>
+    <!-- ═══════════════════════════════════════════════════════
+         TAB 1: TEXT ANALYSIS
+    ═══════════════════════════════════════════════════════ -->
+    <div id="panel-text" class="tab-panel active" style="animation:fadeUp .4s ease .1s both">
+      <div class="input-card mb-4">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/25">
+            <i class="fas fa-font text-white"></i>
+          </div>
+          <div>
+            <h2 class="text-xl font-bold text-white">Text Analysis</h2>
+            <p class="text-dark-400 text-sm">Paste any headline, article, or statement</p>
+          </div>
+          <!-- Voice input button -->
+          <button id="voice-btn" class="voice-btn ml-auto" onclick="toggleVoice()" title="Voice Input">
+            <i class="fas fa-microphone text-sm"></i>
+          </button>
+        </div>
 
-            <div class="relative mb-3">
-              <textarea id="news-text" rows="8" class="w-full px-4 py-3.5 bg-dark-800/60 border border-dark-600/40 rounded-xl text-white text-sm font-mono placeholder-dark-500 resize-none transition-all focus:border-primary-500/50 focus:shadow-[0_0_0_2px_rgba(99,102,241,0.08)]" placeholder="Paste a news article, headline, or statement to analyze..." style="min-height:190px"></textarea>
-              <div class="absolute bottom-3 right-3 flex gap-1.5 opacity-0 focus-within:opacity-100 transition-opacity">
-                <button onclick="cInput()" class="w-7 h-7 bg-dark-700/70 rounded-lg flex items-center justify-center text-dark-400 hover:text-white transition-all" title="Clear"><i class="fas fa-eraser text-xs"></i></button>
-              </div>
-            </div>
+        <!-- Sample buttons -->
+        <div class="flex flex-wrap items-center gap-2 mb-3">
+          <span class="text-dark-500 text-xs">Try:</span>
+          <button onclick="loadSample('s1')" class="px-2.5 py-1 bg-dark-800/50 rounded-full border border-dark-600/30 text-dark-400 text-xs hover:text-white hover:border-indigo-500/40 transition-all"><i class="fas fa-bolt text-yellow-500/70 mr-1"></i>Breaking</button>
+          <button onclick="loadSample('s2')" class="px-2.5 py-1 bg-dark-800/50 rounded-full border border-dark-600/30 text-dark-400 text-xs hover:text-white hover:border-indigo-500/40 transition-all"><i class="fas fa-flask text-blue-500/70 mr-1"></i>Scientific</button>
+          <button onclick="loadSample('s3')" class="px-2.5 py-1 bg-dark-800/50 rounded-full border border-dark-600/30 text-dark-400 text-xs hover:text-white hover:border-indigo-500/40 transition-all"><i class="fas fa-skull text-red-500/70 mr-1"></i>Clickbait</button>
+          <button onclick="loadSample('s4')" class="px-2.5 py-1 bg-dark-800/50 rounded-full border border-dark-600/30 text-dark-400 text-xs hover:text-white hover:border-indigo-500/40 transition-all"><i class="fas fa-futbol text-green-500/70 mr-1"></i>Sports</button>
+        </div>
 
-            <div class="relative mb-4">
-              <i class="fas fa-link absolute left-3.5 top-1/2 -translate-y-1/2 text-dark-400 text-sm"></i>
-              <input type="text" id="source-url" placeholder="Source URL (optional)" class="w-full pl-10 pr-4 py-2.5 bg-dark-800/60 border border-dark-600/40 rounded-xl text-white text-sm placeholder-dark-500 transition-all focus:border-primary-500/50" />
-            </div>
+        <!-- Textarea -->
+        <textarea id="news-text" rows="6" class="w-full px-4 py-3 bg-dark-800/60 border border-dark-600/40 rounded-xl text-white text-sm font-mono placeholder-dark-500 resize-none transition-all focus:border-indigo-500/50 mb-3" placeholder="Paste a news article, headline, or statement here… (Ctrl+Enter to analyze)" style="min-height:150px"></textarea>
 
-            <div class="flex items-center justify-between flex-wrap gap-3">
-              <div class="flex items-center gap-3">
-                <span class="text-dark-500 text-xs bg-dark-700/40 px-2.5 py-1 rounded-full border border-dark-600/20" id="char-count">0 chars</span>
-                <span class="text-dark-600 text-xs">|</span>
-                <span class="text-dark-500 text-xs bg-dark-700/40 px-2.5 py-1 rounded-full border border-dark-600/20" id="word-count">0 words</span>
-                <span class="text-dark-600 text-xs hidden sm:inline ml-1"><kbd class="px-1.5 py-0.5 bg-dark-700/60 rounded text-dark-400 text-xs border border-dark-600/30">Ctrl</kbd>+<kbd class="px-1.5 py-0.5 bg-dark-700/60 rounded text-dark-400 text-xs border border-dark-600/30">Enter</kbd></span>
-              </div>
-              <button onclick="analyzeText()" id="analyze-btn" class="btn-primary text-base px-8 py-3.5 shadow-xl shadow-primary-500/25">
-                <i class="fas fa-shield mr-2"></i> Analyze Text
-              </button>
+        <!-- Source URL (optional) -->
+        <div class="relative mb-4">
+          <i class="fas fa-link absolute left-3.5 top-1/2 -translate-y-1/2 text-dark-500 text-xs pointer-events-none"></i>
+          <input type="text" id="source-url" placeholder="Source URL (optional — enables credibility check)" class="w-full pl-9 pr-4 py-2.5 bg-dark-800/60 border border-dark-600/40 rounded-xl text-white text-sm placeholder-dark-500 transition-all focus:border-indigo-500/50" />
+        </div>
+
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+          <div class="flex items-center gap-2 text-xs text-dark-500">
+            <span id="char-count" class="bg-dark-800/50 px-2 py-1 rounded-full border border-dark-700/30">0 chars</span>
+            <span id="word-count" class="bg-dark-800/50 px-2 py-1 rounded-full border border-dark-700/30">0 words</span>
+            <span class="hidden sm:inline opacity-60"><kbd class="px-1.5 py-0.5 bg-dark-700/60 rounded border border-dark-600/30">Ctrl</kbd>+<kbd class="px-1.5 py-0.5 bg-dark-700/60 rounded border border-dark-600/30">Enter</kbd></span>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="clearText()" class="px-3 py-2 text-xs text-dark-400 border border-dark-600/30 rounded-lg hover:text-white hover:border-dark-500/50 transition-all"><i class="fas fa-eraser mr-1"></i>Clear</button>
+            <button onclick="analyzeText()" id="analyze-btn" class="btn-primary px-6 py-2.5 text-sm shadow-lg shadow-indigo-500/25">
+              <i class="fas fa-shield-halved mr-2"></i>Analyze
+            </button>
+          </div>
+        </div>
+
+        <!-- Voice status -->
+        <div id="voice-status" class="hidden mt-3 flex items-center gap-2 text-sm text-red-400 bg-red-500/8 border border-red-500/20 rounded-xl px-3 py-2">
+          <i class="fas fa-microphone animate-pulse"></i>
+          <span>Listening… speak your news and pause when done</span>
+        </div>
+      </div>
+      <div id="text-result" class="hidden"></div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         TAB 2: URL ANALYZER
+    ═══════════════════════════════════════════════════════ -->
+    <div id="panel-url" class="tab-panel">
+      <div class="input-card mb-4" style="border-color:rgba(20,184,166,.25)">
+        <div class="flex items-center gap-3 mb-5">
+          <div class="w-12 h-12 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-2xl flex items-center justify-center shadow-lg shadow-teal-500/25">
+            <i class="fas fa-globe text-white"></i>
+          </div>
+          <div>
+            <h2 class="text-xl font-bold text-white">URL Analyzer</h2>
+            <p class="text-dark-400 text-sm">Paste a news article URL — we extract and verify it</p>
+          </div>
+        </div>
+
+        <div class="relative mb-4">
+          <i class="fas fa-link absolute left-3.5 top-1/2 -translate-y-1/2 text-dark-400 text-sm pointer-events-none"></i>
+          <input type="url" id="url-input" placeholder="https://example.com/news-article" class="w-full pl-10 pr-4 py-3 bg-dark-800/60 border border-dark-600/40 rounded-xl text-white text-sm placeholder-dark-500 transition-all focus:border-teal-500/50" />
+        </div>
+
+        <div class="url-progress mb-4 hidden" id="url-progress-wrap">
+          <div id="url-progress-bar" class="url-progress-bar" style="width:0%"></div>
+        </div>
+
+        <!-- What we do -->
+        <div class="grid sm:grid-cols-3 gap-3 mb-5">
+          <div class="glass rounded-xl p-3 text-center border border-dark-700/30">
+            <i class="fas fa-download text-teal-400 mb-1 block"></i>
+            <p class="text-dark-300 text-xs font-medium">Fetch Article</p>
+            <p class="text-dark-500 text-xs">Extract full text from URL</p>
+          </div>
+          <div class="glass rounded-xl p-3 text-center border border-dark-700/30">
+            <i class="fas fa-shield-halved text-indigo-400 mb-1 block"></i>
+            <p class="text-dark-300 text-xs font-medium">AI Analysis</p>
+            <p class="text-dark-500 text-xs">Groq LLM + News API verify</p>
+          </div>
+          <div class="glass rounded-xl p-3 text-center border border-dark-700/30">
+            <i class="fas fa-star text-yellow-400 mb-1 block"></i>
+            <p class="text-dark-300 text-xs font-medium">Credibility Score</p>
+            <p class="text-dark-500 text-xs">Domain trust rating</p>
+          </div>
+        </div>
+
+        <button onclick="analyzeUrl()" id="url-analyze-btn" class="w-full py-3 font-semibold rounded-xl text-white transition-all shadow-xl flex items-center justify-center gap-2" style="background:linear-gradient(135deg,#0d9488,#14b8a6)">
+          <i class="fas fa-globe"></i> Extract & Analyze URL
+        </button>
+      </div>
+      <div id="url-result" class="hidden"></div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         TAB 3: IMAGE OCR
+    ═══════════════════════════════════════════════════════ -->
+    <div id="panel-image" class="tab-panel">
+      <div class="input-card mb-4" style="border-color:rgba(168,85,247,.25)">
+        <div class="flex items-center gap-3 mb-5">
+          <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/25">
+            <i class="fas fa-image text-white"></i>
+          </div>
+          <div>
+            <h2 class="text-xl font-bold text-white">Image OCR Analysis</h2>
+            <p class="text-dark-400 text-sm">Upload a news screenshot for text extraction</p>
+          </div>
+        </div>
+
+        <div id="drop-zone" class="drop-zone p-10 text-center mb-4" onclick="document.getElementById('img-input').click()">
+          <div class="scan-line" id="scan-line" style="display:none"></div>
+          <input type="file" id="img-input" accept="image/*" class="hidden" onchange="handleImg(this)" />
+          <div id="upload-placeholder">
+            <div class="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-purple-500/15 to-pink-500/15 rounded-3xl flex items-center justify-center border border-purple-500/20">
+              <i class="fas fa-cloud-arrow-up text-purple-400 text-3xl"></i>
+            </div>
+            <p class="text-white font-semibold mb-1">Drop image or click to browse</p>
+            <p class="text-dark-500 text-sm">PNG, JPG, JPEG, WEBP · Max 10MB</p>
+          </div>
+          <div id="image-preview" class="hidden relative">
+            <img id="preview-img" class="max-h-64 mx-auto rounded-xl object-contain shadow-xl" alt="Uploaded image" />
+            <button onclick="removeImg(event)" class="absolute top-2 right-2 w-8 h-8 bg-red-500/80 rounded-full flex items-center justify-center text-white hover:bg-red-500 transition-all"><i class="fas fa-times text-sm"></i></button>
+          </div>
+        </div>
+
+        <div id="ocr-status" class="hidden mb-4 glass rounded-xl p-4 flex items-center gap-4 border border-purple-500/20">
+          <div class="spinner" style="width:1.5rem;height:1.5rem;border-width:3px;border-top-color:#a855f7"></div>
+          <div class="flex-1">
+            <p class="text-white text-sm font-medium" id="ocr-status-text">Extracting text…</p>
+            <div class="mt-2 w-full h-1.5 bg-dark-700 rounded-full overflow-hidden">
+              <div id="ocr-bar" class="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-300" style="width:0%"></div>
             </div>
           </div>
         </div>
-        <div id="text-result" class="mt-6 hidden"></div>
-      </div>
 
-      <!-- ===== IMAGE ANALYSIS ===== -->
-      <div class="animate-fade-in" style="animation-delay:0.2s">
-        <div class="glow-card glass" style="border:1px solid rgba(20,184,166,0.2);background:rgba(30,41,59,0.45)">
-          <div class="absolute top-0 left-0 w-48 h-48 bg-accent-500/8 rounded-full blur-3xl pointer-events-none"></div>
-          <div class="absolute bottom-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none"></div>
-          <div class="relative p-6 md:p-8">
-            <div class="flex items-center gap-4 mb-6">
-              <div class="w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center shadow-xl shadow-emerald-500/25">
-                <i class="fas fa-image text-white text-xl"></i>
+        <div id="extracted-container" class="hidden mb-4">
+          <div class="glass rounded-xl p-4 border border-purple-500/20">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <i class="fas fa-file-lines text-purple-400 text-sm"></i>
+                <p class="text-dark-400 text-xs font-semibold uppercase tracking-wider">Extracted Text</p>
               </div>
-              <div>
-                <h2 class="text-2xl font-bold text-white">Image Analysis</h2>
-                <p class="text-dark-400 text-sm">Upload news screenshot for OCR extraction</p>
-              </div>
+              <span class="text-dark-500 text-xs" id="ext-chars">0 chars</span>
             </div>
-
-            <div id="drop-zone" class="drop-zone p-10 text-center mb-4" onclick="document.getElementById('img-input').click()">
-              <div class="scan-line" id="scan-line" style="display:none"></div>
-              <input type="file" id="img-input" accept="image/*" class="hidden" onchange="handleImg(this)" />
-              <div id="upload-placeholder">
-                <div class="w-24 h-24 mx-auto mb-5 bg-gradient-to-br from-accent-500/15 to-emerald-500/15 rounded-3xl flex items-center justify-center border border-accent-500/20 animate-float">
-                  <i class="fas fa-cloud-arrow-up text-accent-400 text-4xl"></i>
-                </div>
-                <p class="text-white font-semibold text-lg mb-1">Drop image here or click to browse</p>
-                <p class="text-dark-500 text-sm">Supports PNG, JPG, JPEG, WEBP</p>
-                <div class="mt-4 flex items-center justify-center gap-2">
-                  <span class="w-1.5 h-1.5 bg-accent-500/50 rounded-full"></span>
-                  <span class="text-dark-600 text-xs">Text extracted via OCR</span>
-                  <span class="w-1.5 h-1.5 bg-accent-500/50 rounded-full"></span>
-                </div>
-              </div>
-              <div id="image-preview" class="hidden relative">
-                <img id="preview-img" class="max-h-72 mx-auto rounded-xl object-contain shadow-xl" alt="Uploaded image" />
-                <button onclick="removeImg(event)" class="absolute top-3 right-3 w-9 h-9 bg-red-500/80 backdrop-blur rounded-full flex items-center justify-center text-white hover:bg-red-500 transition-all shadow-lg"><i class="fas fa-xmark"></i></button>
-              </div>
+            <div class="glass rounded-lg p-3 mb-3 border border-yellow-500/15 bg-yellow-500/4">
+              <p class="text-xs text-dark-400"><i class="fas fa-pen text-yellow-400 mr-1.5"></i><strong class="text-yellow-400">Review & correct</strong> OCR errors before analyzing — especially numbers and special characters.</p>
             </div>
-
-            <div id="ocr-status" class="hidden mb-4">
-              <div class="glass rounded-xl p-4 flex items-center gap-4 border border-accent-500/20">
-                <div class="spinner" style="width:1.5rem;height:1.5rem;border-width:3px;border-top-color:#14b8a6"></div>
-                <div class="flex-1">
-                  <p class="text-white text-sm font-medium" id="ocr-status-text">Extracting text...</p>
-                  <div class="mt-2 w-full h-1.5 bg-dark-700 rounded-full overflow-hidden">
-                    <div id="ocr-bar" class="h-full bg-gradient-to-r from-accent-500 to-emerald-500 rounded-full transition-all duration-300" style="width:0%"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div id="extracted-container" class="hidden mb-4">
-              <div class="glass rounded-xl p-4 border border-accent-500/20">
-                <div class="flex items-center justify-between mb-3">
-                  <div class="flex items-center gap-2">
-                    <i class="fas fa-file-lines text-accent-400"></i>
-                    <p class="text-dark-400 text-xs font-medium uppercase tracking-wider">Extracted Text</p>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <button onclick="document.getElementById('img-input').click()" class="text-dark-500 hover:text-accent-400 text-xs transition-all"><i class="fas fa-rotate mr-1"></i>Retry OCR</button>
-                    <span class="text-dark-500 text-xs bg-dark-700/40 px-2 py-0.5 rounded-full" id="ext-chars">0 chars</span>
-                  </div>
-                </div>
-                <div class="glass rounded-lg p-3 mb-3 border border-yellow-500/15" style="background:rgba(234,179,8,0.05)">
-                  <div class="flex items-start gap-2.5">
-                    <i class="fas fa-pen text-yellow-400 text-xs mt-0.5"></i>
-                    <p class="text-dark-400 text-xs leading-relaxed"><strong class="text-yellow-400">Review & correct</strong> the extracted text below before analyzing. OCR may misread characters like <code class="text-dark-300 bg-dark-700/50 px-1 rounded text-[10px]">l</code> vs <code class="text-dark-300 bg-dark-700/50 px-1 rounded text-[10px]">1</code> or <code class="text-dark-300 bg-dark-700/50 px-1 rounded text-[10px]">O</code> vs <code class="text-dark-300 bg-dark-700/50 px-1 rounded text-[10px]">0</code>.</p>
-                  </div>
-                </div>
-                <textarea id="extracted-text" rows="5" class="w-full px-3 py-2.5 bg-dark-800/60 border border-dark-600/40 rounded-xl text-white text-sm font-mono resize-none mb-3 transition-all focus:border-accent-500/50" placeholder="Extracted text appears here — review and fix any OCR errors..." oninput="document.getElementById('ext-chars').textContent=this.value.length+' chars'"></textarea>
-                <button onclick="analyzeImgText()" id="analyze-img-btn" class="w-full py-3 font-semibold rounded-xl text-white transition-all shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-2" style="background:linear-gradient(135deg,#059669,#10b981)">
-                  <i class="fas fa-shield"></i> Analyze Extracted Text
-                </button>
-              </div>
-            </div>
-
-            <div class="glass rounded-xl p-4 border border-yellow-500/15" style="background:rgba(234,179,8,0.04)">
-              <div class="flex items-start gap-3">
-                <div class="w-8 h-8 bg-yellow-500/15 rounded-lg flex items-center justify-center shrink-0">
-                  <i class="fas fa-lightbulb text-yellow-400 text-sm"></i>
-                </div>
-                <div>
-                  <p class="text-dark-300 text-sm font-medium">How to get accurate results</p>
-                  <ul class="text-dark-500 text-xs mt-2 leading-relaxed space-y-1.5">
-                    <li><i class="fas fa-check text-emerald-400 mr-1.5"></i>Crop the image to show <strong class="text-dark-300">only the news text</strong></li>
-                    <li><i class="fas fa-check text-emerald-400 mr-1.5"></i>Use <strong class="text-dark-300">clear, high-contrast</strong> screenshots (black text on white background)</li>
-                    <li><i class="fas fa-check text-emerald-400 mr-1.5"></i><strong class="text-dark-300">Review & edit</strong> the extracted text below before clicking Analyze</li>
-                    <li><i class="fas fa-keyboard text-dark-400 mr-1.5"></i>You can also <strong class="text-dark-300">paste text directly</strong> in the Text Analysis tab</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
+            <textarea id="extracted-text" rows="5" class="w-full px-3 py-2.5 bg-dark-800/60 border border-dark-600/40 rounded-xl text-white text-sm font-mono resize-none mb-3 focus:border-purple-500/50 transition-all" placeholder="Extracted text appears here…" oninput="document.getElementById('ext-chars').textContent=this.value.length+' chars'"></textarea>
+            <button onclick="analyzeImgText()" id="analyze-img-btn" class="w-full py-3 font-semibold rounded-xl text-white transition-all shadow-xl flex items-center justify-center gap-2" style="background:linear-gradient(135deg,#9333ea,#a855f7)">
+              <i class="fas fa-shield-halved"></i> Analyze Extracted Text
+            </button>
           </div>
         </div>
-        <div id="img-result" class="mt-6 hidden"></div>
       </div>
+      <div id="img-result" class="hidden"></div>
     </div>
-  </div>
+
+  </div><!-- /container -->
 </div>
 
 <div id="toast-container"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-<script>
-// ===== COUNTERS =====
-var ta = document.getElementById('news-text');
-ta.addEventListener('input', function(){
-  var t = this.value;
-  document.getElementById('char-count').textContent = t.length + ' chars';
-  document.getElementById('word-count').textContent = (t.trim() ? t.trim().split(/\s+/).length : 0) + ' words';
-});
-ta.addEventListener('keydown', function(e){
-  if(e.ctrlKey && e.key === 'Enter'){ e.preventDefault(); analyzeText(); }
-});
+<!-- ═══════════════════════════════════════════════════════════
+     PDF MODAL (shown from within results)
+═══════════════════════════════════════════════════════════ -->
+<div id="pdf-modal" style="display:none;position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:1rem">
+  <div class="glass rounded-2xl p-6 w-full max-w-sm border border-indigo-500/20 shadow-2xl" style="animation:fadeUp .3s ease">
+    <h3 class="text-white font-bold text-base mb-4"><i class="fas fa-file-pdf text-red-400 mr-2"></i>Export PDF Report</h3>
+    <p class="text-dark-400 text-sm mb-4">Download a professional analysis report with all findings.</p>
+    <div class="flex gap-3">
+      <button onclick="generatePDF()" class="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-xl text-sm transition-all"><i class="fas fa-download mr-2"></i>Download</button>
+      <button onclick="closePdfModal()" class="px-4 py-2.5 glass border border-dark-600/40 text-dark-300 rounded-xl text-sm hover:text-white transition-all">Cancel</button>
+    </div>
+  </div>
+</div>
 
-// ===== SAMPLES =====
-var SAMPLES = {
-  s1: 'BREAKING: Scientists at CERN have discovered a parallel universe where time runs backwards. The discovery was made during routine maintenance of the Large Hadron Collider when researchers accidentally opened a portal to an alternate dimension.',
-  s2: 'Researchers at Stanford University published a study in Nature Medicine showing that a new AI-powered diagnostic tool can detect early-stage lung cancer with 94% accuracy from routine blood tests.',
-  s3: 'YOU WON\'T BELIEVE what this mom found in her backyard! SHOCKING video goes viral! Doctors HATE this one simple trick that will change your life forever! Share this with 10 friends!'
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+{% block scripts %}
+<script>
+/* ─────────────────────────────────────────────────────────
+   GLOBALS
+───────────────────────────────────────────────────────── */
+var lastResult = null;
+var sentimentChart = null;
+var speechRecognition = null;
+var isRecording = false;
+
+/* ─────────────────────────────────────────────────────────
+   HELPERS
+───────────────────────────────────────────────────────── */
+function $(id){ return document.getElementById(id); }
+
+function esc(v){
+  return String(v == null ? '' : v)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showToast(msg, type){
+  if(typeof window.showToast === 'function'){ window.showToast(msg, type); return; }
+  var t=document.createElement('div');
+  t.className='fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl text-white text-sm font-medium shadow-xl';
+  t.style.background= type==='error' ? 'rgba(239,68,68,.9)' : type==='success' ? 'rgba(34,197,94,.9)' : 'rgba(99,102,241,.9)';
+  t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(function(){ t.remove(); }, 3200);
+}
+
+/* ─────────────────────────────────────────────────────────
+   TAB SWITCHER
+───────────────────────────────────────────────────────── */
+function switchTab(name){
+  ['text','url','image'].forEach(function(t){
+    $('tab-'+t).classList.toggle('active', t===name);
+    $('panel-'+t).classList.toggle('active', t===name);
+  });
+}
+
+/* ─────────────────────────────────────────────────────────
+   COUNTERS
+───────────────────────────────────────────────────────── */
+var ta = $('news-text');
+ta.addEventListener('input', function(){
+  var t=this.value;
+  $('char-count').textContent=t.length+' chars';
+  $('word-count').textContent=(t.trim()?t.trim().split(/\s+/).length:0)+' words';
+});
+ta.addEventListener('keydown', function(e){ if(e.ctrlKey&&e.key==='Enter'){e.preventDefault();analyzeText();} });
+
+/* ─────────────────────────────────────────────────────────
+   SAMPLES
+───────────────────────────────────────────────────────── */
+var SAMPLES={
+  s1:'BREAKING: Scientists at CERN have discovered a parallel universe where time runs backwards. The discovery was made during routine maintenance of the Large Hadron Collider when researchers accidentally opened a portal to an alternate dimension.',
+  s2:'Researchers at Stanford University published a study in Nature Medicine showing that a new AI-powered diagnostic tool can detect early-stage lung cancer with 94% accuracy from routine blood tests.',
+  s3:'YOU WON\'T BELIEVE what this mom found in her backyard! SHOCKING video goes viral! Doctors HATE this one simple trick that will change your life forever! Share this with 10 friends!',
+  s4:'RCB defeated CSK by 7 wickets in the IPL 2026 final played at Narendra Modi Stadium in Ahmedabad. Virat Kohli was named Player of the Match after scoring a brilliant 82 not out.'
 };
 function loadSample(k){ ta.value=SAMPLES[k]; ta.dispatchEvent(new Event('input')); ta.focus(); }
-function cInput(){ ta.value=''; document.getElementById('source-url').value=''; document.getElementById('text-result').classList.add('hidden'); ta.dispatchEvent(new Event('input')); }
+function clearText(){ ta.value=''; $('source-url').value=''; $('text-result').classList.add('hidden'); ta.dispatchEvent(new Event('input')); }
 
-// ===== PROGRESS ANIMATION =====
+/* ─────────────────────────────────────────────────────────
+   VOICE INPUT
+───────────────────────────────────────────────────────── */
+function toggleVoice(){
+  if(!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)){
+    showToast('Voice input not supported in this browser','error'); return;
+  }
+  if(isRecording){ stopVoice(); return; }
+
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  speechRecognition = new SR();
+  speechRecognition.continuous = true;
+  speechRecognition.interimResults = true;
+  speechRecognition.lang = 'en-IN';
+
+  speechRecognition.onstart = function(){
+    isRecording = true;
+    $('voice-btn').classList.add('recording');
+    $('voice-status').classList.remove('hidden');
+  };
+  speechRecognition.onresult = function(e){
+    var transcript = '';
+    for(var i=e.resultIndex;i<e.results.length;i++){
+      transcript += e.results[i][0].transcript;
+    }
+    ta.value = transcript;
+    ta.dispatchEvent(new Event('input'));
+  };
+  speechRecognition.onerror = function(){ stopVoice(); showToast('Voice input error','error'); };
+  speechRecognition.onend = function(){ stopVoice(); };
+  speechRecognition.start();
+}
+function stopVoice(){
+  if(speechRecognition) speechRecognition.stop();
+  isRecording = false;
+  $('voice-btn').classList.remove('recording');
+  $('voice-status').classList.add('hidden');
+}
+
+/* ─────────────────────────────────────────────────────────
+   LOADING HTML
+───────────────────────────────────────────────────────── */
 function getLoadingHTML(msg){
-  return '<div class="glass rounded-2xl p-6 border border-primary-500/20 animate-fade-in">'+
-    '<p class="text-dark-400 text-sm text-center mb-5 font-medium">'+msg+'</p>'+
-    '<div class="max-w-md mx-auto space-y-2" id="psteps">'+
-      '<div class="step-indicator pending" id="ps1"><span class="dot"></span><span>Preprocessing text...</span></div>'+
-      '<div class="step-indicator pending" id="ps2"><span class="dot"></span><span>Checking trusted sources...</span></div>'+
-      '<div class="step-indicator pending" id="ps3"><span class="dot"></span><span>Running AI inference...</span></div>'+
-      '<div class="step-indicator pending" id="ps4"><span class="dot"></span><span>Compiling results...</span></div>'+
+  return '<div class="result-card glass border border-indigo-500/20">'+
+    '<p class="text-dark-400 text-sm text-center mb-5">'+msg+'</p>'+
+    '<div class="max-w-xs mx-auto space-y-1.5" id="psteps">'+
+      '<div class="step-indicator pending" id="ps1"><span class="dot"></span><span>Preprocessing text…</span></div>'+
+      '<div class="step-indicator pending" id="ps2"><span class="dot"></span><span>Checking trusted sources…</span></div>'+
+      '<div class="step-indicator pending" id="ps3"><span class="dot"></span><span>Running Groq AI analysis…</span></div>'+
+      '<div class="step-indicator pending" id="ps4"><span class="dot"></span><span>Generating XAI explanation…</span></div>'+
     '</div>'+
     '<div class="mt-4 flex items-center justify-center gap-2">'+
-      '<div class="spinner" style="width:1.25rem;height:1.25rem;border-width:2px"></div>'+
-      '<span class="text-dark-500 text-xs" id="pstatus">Starting analysis...</span>'+
+      '<div class="spinner" style="width:1.2rem;height:1.2rem;border-width:2px"></div>'+
+      '<span class="text-dark-500 text-xs" id="pstatus">Starting…</span>'+
     '</div></div>';
 }
 function runSteps(){
-  setTimeout(function(){ $('#ps1').className='step-indicator active'; $('#pstatus').textContent='Preprocessing...'; },200);
-  setTimeout(function(){ $('#ps1').className='step-indicator done'; $('#ps2').className='step-indicator active'; $('#pstatus').textContent='Checking trusted sources...'; },700);
-  setTimeout(function(){ $('#ps2').className='step-indicator done'; $('#ps3').className='step-indicator active'; $('#pstatus').textContent='Running AI via Groq/Phi-3...'; },1500);
-  setTimeout(function(){ $('#ps3').className='step-indicator done'; $('#ps4').className='step-indicator active'; $('#pstatus').textContent='Compiling results...'; },3000);
-  setTimeout(function(){ $('#ps4').className='step-indicator done'; $('#pstatus').textContent='Done!'; },4500);
-}
-function $(id){ return document.getElementById(id); }
-function esc(v){
-  return String(v == null ? '' : v).replace(/[&<>"']/g, function(c){
-    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
-  });
-}
-function formatExplanation(v){
-  return esc(v || 'Analysis complete.').replace(/\n{2,}/g, '</p><p class="text-dark-200 text-sm leading-relaxed pl-3 mt-3">').replace(/\n/g, '<br>');
+  setTimeout(function(){ var e=$('ps1'); if(e) e.className='step-indicator active'; var s=$('pstatus'); if(s) s.textContent='Preprocessing…'; },200);
+  setTimeout(function(){ var e1=$('ps1'),e2=$('ps2'); if(e1) e1.className='step-indicator done'; if(e2) e2.className='step-indicator active'; var s=$('pstatus'); if(s) s.textContent='Checking sources…'; },800);
+  setTimeout(function(){ var e2=$('ps2'),e3=$('ps3'); if(e2) e2.className='step-indicator done'; if(e3) e3.className='step-indicator active'; var s=$('pstatus'); if(s) s.textContent='Groq AI analyzing…'; },1800);
+  setTimeout(function(){ var e3=$('ps3'),e4=$('ps4'); if(e3) e3.className='step-indicator done'; if(e4) e4.className='step-indicator active'; var s=$('pstatus'); if(s) s.textContent='Building explanation…'; },3500);
+  setTimeout(function(){ var e4=$('ps4'); if(e4) e4.className='step-indicator done'; var s=$('pstatus'); if(s) s.textContent='Done!'; },5000);
 }
 
-// ===== TEXT ANALYSIS =====
+/* ─────────────────────────────────────────────────────────
+   TEXT ANALYSIS
+───────────────────────────────────────────────────────── */
 function analyzeText(){
-  var text = ta.value.trim();
+  var text=ta.value.trim();
   if(!text){ showToast('Please enter news text to analyze','error'); return; }
   if(text.length<5){ showToast('Enter at least 5 characters','error'); return; }
 
-  var btn = $('analyze-btn');
-  btn.disabled=true; btn.innerHTML='<div class="spinner"></div> Analyzing...';
+  var btn=$('analyze-btn');
+  btn.disabled=true; btn.innerHTML='<div class="spinner" style="width:1rem;height:1rem;border-width:2px"></div> Analyzing…';
 
-  var resultDiv = $('text-result');
-  resultDiv.innerHTML = getLoadingHTML('Analyzing your news content');
-  resultDiv.classList.remove('hidden');
+  var rd=$('text-result');
+  rd.innerHTML=getLoadingHTML('Analyzing news content with Groq AI');
+  rd.classList.remove('hidden');
   runSteps();
 
-  var data = {text: text, source_type: 'text'};
-  var su = $('source-url').value.trim();
-  if(su) data.source_url = su;
+  var data={text:text,source_type:'text'};
+  var su=$('source-url').value.trim();
+  if(su) data.source_url=su;
 
-  // Simple fetch — no dependency on api.js
-  var token = window.AUTH_TOKEN || '';
-  fetch('/api/predict/', {
-    method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-    credentials:'same-origin',
-    body:JSON.stringify(data)
-  })
-  .then(function(r){ return r.json(); })
-  .then(function(res){
-    if(res.error){
-      resultDiv.innerHTML = '<div class="glass rounded-2xl p-8 border-2 border-red-500/25 text-center animate-fade-in">'+
-        '<i class="fas fa-exclamation-triangle text-5xl text-red-400 mb-4"></i>'+
-        '<p class="text-red-400 font-medium text-lg">'+res.error+'</p></div>';
-      showToast(res.error,'error'); return;
-    }
-    showResult(resultDiv, res);
-  })
-  .catch(function(err){
-    resultDiv.innerHTML = '<div class="glass rounded-2xl p-8 border-2 border-red-500/25 text-center animate-fade-in">'+
-      '<i class="fas fa-exclamation-triangle text-5xl text-red-400 mb-4"></i>'+
-      '<p class="text-red-400 font-medium text-lg">Analysis failed</p>'+
-      '<p class="text-dark-500 text-sm mt-2">Network error. Is the server running?</p></div>';
-    showToast('Analysis failed. Check server.','error');
-  })
-  .finally(function(){
-    btn.disabled=false; btn.innerHTML='<i class="fas fa-shield mr-2"></i> Analyze Text';
+  callApi('/api/predict/',data,function(res){
+    showResult(rd,res,'text');
+  },function(){
+    showApiError(rd,'Analysis failed — check server connection');
+  },function(){
+    btn.disabled=false; btn.innerHTML='<i class="fas fa-shield-halved mr-2"></i>Analyze';
   });
 }
 
-function showResult(container, r){
-  var isReal = r.prediction === 'REAL';
-  var col = isReal ? 'emerald' : 'red';
-  var badge = isReal ? 'badge-real' : 'badge-fake';
-  var icon = isReal ? 'fa-check-circle' : 'fa-times-circle';
-  var confColor = isReal ? '#34d399' : '#f87171';
-  var verdictTitle = isReal ? 'REAL NEWS' : 'FAKE NEWS';
-  var verdictCopy = isReal ? 'The entered article is supported by the strongest available checks for this exact claim.' : 'The entered article conflicts with the strongest available checks for this exact claim.';
-  var category = r.category || 'General';
-  var modelVerdict = r.model_verdict || 'N/A';
-  var trustedCount = r.trusted_source_count || 0;
+/* ─────────────────────────────────────────────────────────
+   URL ANALYSIS
+───────────────────────────────────────────────────────── */
+function analyzeUrl(){
+  var url=$('url-input').value.trim();
+  if(!url){ showToast('Please enter a URL','error'); return; }
+  if(!url.startsWith('http')){ showToast('URL must start with http:// or https://','error'); return; }
 
-  // SVG ring
-  var circ = 251.2;
-  var off = circ - (r.confidence/100)*circ;
+  var btn=$('url-analyze-btn');
+  btn.disabled=true; btn.innerHTML='<div class="spinner" style="width:1rem;height:1rem;border-width:2px"></div> Fetching & analyzing…';
 
-  // Sentiment
-  var sBadge = r.sentiment==='Positive'?'bg-emerald-500/12 text-emerald-400 border-emerald-500/15':
-    r.sentiment==='Negative'?'bg-red-500/12 text-red-400 border-red-500/15':'bg-dark-600/25 text-dark-300 border-dark-500/15';
-  var sIcon = r.sentiment==='Positive'?'fa-face-smile':r.sentiment==='Negative'?'fa-face-frown':'fa-face-meh';
-  var sColor = r.sentiment==='Positive'?'text-emerald-400':r.sentiment==='Negative'?'text-red-400':'text-dark-300';
+  var pw=$('url-progress-wrap'), pb=$('url-progress-bar');
+  pw.classList.remove('hidden'); pb.style.width='0%';
+  var prog=0, progInterval=setInterval(function(){
+    prog=Math.min(prog+Math.random()*8, 85); pb.style.width=prog+'%';
+  }, 350);
 
-  // Suspicious phrases
-  var suspHtml = '';
-  if(r.suspicious_phrases && r.suspicious_phrases.length){
-    suspHtml = '<div class="mt-4 p-4 glass rounded-xl border border-red-500/15">'+
-      '<p class="text-dark-500 text-xs mb-2 font-medium uppercase tracking-wider"><i class="fas fa-triangle-exclamation text-red-400 mr-1"></i> Suspicious Patterns</p>'+
-      '<div class="flex flex-wrap gap-1.5">'+r.suspicious_phrases.map(function(p){
-        return '<span class="px-2.5 py-1 bg-red-500/12 text-red-400 text-xs rounded-full border border-red-500/15">'+esc(p)+'</span>';
-      }).join('')+'</div></div>';
-  }
+  var rd=$('url-result');
+  rd.innerHTML=getLoadingHTML('Fetching article and verifying…');
+  rd.classList.remove('hidden');
+  runSteps();
 
-  // Keywords
-  var kwHtml = '';
-  if(r.keywords && r.keywords.length){
-    kwHtml = '<div class="mt-4"><p class="text-dark-500 text-xs mb-2 font-medium uppercase tracking-wider"><i class="fas fa-hashtag text-primary-400 mr-1"></i> Keywords</p>'+
-      '<div class="flex flex-wrap gap-2">'+r.keywords.map(function(k){
-        return '<span class="px-3 py-1.5 bg-dark-700/40 text-dark-300 text-sm rounded-lg border border-dark-600/30">'+esc(k)+'</span>';
-      }).join('')+'</div></div>';
-  }
-
-  // Fact checks
-  var fcHtml = '';
-  if(r.fact_checks && r.fact_checks.length){
-    fcHtml = '<div class="mt-4"><p class="text-dark-500 text-xs mb-2 font-medium uppercase tracking-wider"><i class="fas fa-check-double text-primary-400 mr-1"></i> External Fact Checks</p><div class="space-y-2">'+
-      r.fact_checks.map(function(fc){
-        var rc = 'text-yellow-400'; var rl = (fc.rating||'').toLowerCase();
-        if(rl.includes('false')||rl.includes('fake')) rc='text-red-400';
-        else if(rl.includes('true')||rl.includes('correct')||rl.includes('trusted')) rc='text-emerald-400';
-        var claim = esc(fc.claim||'');
-        if(fc.url){ claim = '<a href="'+esc(fc.url)+'" target="_blank" rel="noopener noreferrer" class="hover:text-primary-300 transition-colors">'+claim+'</a>'; }
-        return '<div class="glass rounded-xl p-3 flex items-start gap-3 border '+(fc.trusted?'border-emerald-500/20':'border-dark-600/20')+'">'+
-          '<i class="fas fa-check-double text-primary-400 mt-0.5"></i>'+
-          '<div class="flex-1 min-w-0"><p class="text-dark-200 text-sm truncate">'+claim+'</p>'+
-          '<div class="flex items-center gap-2 mt-1"><span class="'+rc+' text-xs font-medium">'+esc(fc.rating||'Referenced')+'</span>'+
-          (fc.source?'<span class="text-dark-500 text-xs"> via '+esc(fc.source)+'</span>':'')+
-          (fc.published?'<span class="text-dark-600 text-xs">'+esc(fc.published)+'</span>':'')+
-          '</div></div></div>';
-      }).join('')+'</div></div>';
-  }
-
-  var html = '<div class="glass rounded-2xl p-6 md:p-8 border-2 border-'+col+'-500/25 animate-fade-in relative overflow-hidden">'+
-    '<div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-'+col+'-500/8 rounded-full blur-3xl pointer-events-none"></div>'+
-    '<div class="relative">'+
-    // Top bar
-    '<div class="flex items-start justify-between gap-4 mb-6 flex-wrap">'+
-      '<div class="flex items-center gap-3 flex-wrap">'+
-        '<span class="'+badge+' text-lg px-5 py-1.5"><i class="fas '+icon+' mr-1.5"></i> '+r.prediction+'</span>'+
-        '<span class="text-dark-400 text-xs bg-dark-700/30 px-2.5 py-1 rounded-full border border-dark-600/20"><i class="fas fa-layer-group mr-1"></i>'+esc(category)+'</span>'+
-        '<span class="text-emerald-400 text-xs bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20"><i class="fas fa-newspaper mr-1"></i>'+trustedCount+' trusted sources</span>'+
-        '<span class="text-dark-500 text-xs bg-dark-700/30 px-2.5 py-1 rounded-full border border-dark-600/20"><i class="fas fa-microchip mr-1"></i>'+esc(r.method||'AI')+'</span>'+
-      '</div>'+
-      '<span class="text-dark-600 text-xs"><i class="far fa-clock mr-1"></i>'+(r.processing_time||'0')+'s</span>'+
-    '</div>'+
-    '<div class="mb-8 rounded-2xl border border-'+col+'-500/15 bg-'+col+'-500/5 p-5">'+
-      '<p class="text-white text-xl font-bold mb-1">'+verdictTitle+'</p>'+
-      '<p class="text-dark-300 text-sm leading-relaxed">'+verdictCopy+'</p>'+
-    '</div>'+
-    // Confidence gauge + stats
-    '<div class="grid sm:grid-cols-3 gap-6 mb-8">'+
-      '<div class="flex flex-col items-center justify-center">'+
-        '<div style="position:relative;width:120px;height:120px">'+
-          '<svg width="120" height="120" viewBox="0 0 100 100" style="transform:rotate(-90deg)">'+
-            '<circle cx="50" cy="50" r="40" fill="none" stroke="rgba(71,85,105,0.25)" stroke-width="8"></circle>'+
-            '<circle cx="50" cy="50" r="40" fill="none" stroke="'+confColor+'" stroke-width="8" stroke-linecap="round" stroke-dasharray="'+circ+'" stroke-dashoffset="'+off+'" style="transition:stroke-dashoffset 1.8s cubic-bezier(0.4,0,0.2,1)"></circle>'+
-          '</svg>'+
-          '<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">'+
-            '<span style="font-size:1.75rem;font-weight:800;color:'+confColor+'">'+r.confidence+'%</span>'+
-            '<span class="text-dark-500 text-xs">Confidence</span>'+
-          '</div>'+
-        '</div>'+
-      '</div>'+
-      '<div class="sm:col-span-2 grid grid-cols-2 gap-3">'+
-        '<div class="glass rounded-xl p-3 text-center border border-dark-600/20"><i class="fas fa-face-smile text-primary-400 text-lg mb-1"></i><p class="text-dark-500 text-xs">Sentiment</p><p class="text-white text-sm font-medium"><i class="fas '+sIcon+' '+sColor+'"></i> '+esc(r.sentiment||'Neutral')+'</p></div>'+
-        '<div class="glass rounded-xl p-3 text-center border border-dark-600/20"><i class="fas fa-file-lines text-primary-400 text-lg mb-1"></i><p class="text-dark-500 text-xs">Words</p><p class="text-white text-sm font-medium">'+(r.word_count||0)+'</p></div>'+
-        '<div class="glass rounded-xl p-3 text-center border border-dark-600/20"><i class="fas fa-newspaper text-primary-400 text-lg mb-1"></i><p class="text-dark-500 text-xs">Trusted Sources</p><p class="text-white text-sm font-medium">'+trustedCount+'</p></div>'+
-        '<div class="glass rounded-xl p-3 text-center border border-dark-600/20"><i class="fas fa-microchip text-primary-400 text-lg mb-1"></i><p class="text-dark-500 text-xs">AI Verdict</p><p class="text-white text-sm font-medium truncate">'+esc(modelVerdict)+'</p></div>'+
-      '</div>'+
-    '</div>'+
-    // Explanation
-    '<div class="mb-6">'+
-      '<p class="text-dark-500 text-xs mb-2 font-medium uppercase tracking-wider"><i class="fas fa-quote-left text-primary-400 mr-1"></i> AI Explanation</p>'+
-      '<div class="glass rounded-xl p-5 border border-dark-600/20 relative">'+
-        '<div class="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-primary-500 to-transparent rounded-l-xl"></div>'+
-        '<p class="text-dark-200 text-sm leading-relaxed pl-3">'+formatExplanation(r.explanation)+'</p>'+
-      '</div>'+
-    '</div>'+
-    // Sentiment score
-    '<div class="mb-4"><p class="text-dark-500 text-xs mb-1.5 font-medium uppercase tracking-wider">Sentiment Score</p>'+
-      '<div class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium '+sBadge+'"><i class="fas '+sIcon+'"></i> '+esc(r.sentiment||'Neutral')+' <span class="opacity-60">('+(r.sentiment_score||0).toFixed(2)+')</span></div></div>'+
-    suspHtml+
-    fcHtml+
-    kwHtml+
-    '</div></div>';
-
-  container.innerHTML = html;
-  container.scrollIntoView({behavior:'smooth',block:'start'});
+  callApi('/api/predict/url',{url:url},function(res){
+    clearInterval(progInterval); pb.style.width='100%';
+    setTimeout(function(){ pw.classList.add('hidden'); },500);
+    showResult(rd,res,'url');
+  },function(errMsg){
+    clearInterval(progInterval); pw.classList.add('hidden');
+    showApiError(rd,errMsg||'Could not extract article from this URL');
+  },function(){
+    btn.disabled=false; btn.innerHTML='<i class="fas fa-globe"></i> Extract & Analyze URL';
+  });
 }
 
-// ===== IMAGE ANALYSIS =====
+/* ─────────────────────────────────────────────────────────
+   IMAGE / OCR ANALYSIS
+───────────────────────────────────────────────────────── */
 function handleImg(inp){
-  var f = inp.files[0];
-  if(!f) return;
+  var f=inp.files[0]; if(!f) return;
   $('drop-zone').classList.add('active');
   $('scan-line').style.display='block';
   $('upload-placeholder').style.display='none';
-
-  var rd = new FileReader();
-  rd.onload = function(e){
-    $('preview-img').src = e.target.result;
+  var rd=new FileReader();
+  rd.onload=function(e){
+    $('preview-img').src=e.target.result;
     $('image-preview').classList.remove('hidden');
     $('drop-zone').classList.remove('active');
     $('scan-line').style.display='none';
@@ -446,7 +506,6 @@ function handleImg(inp){
   };
   rd.readAsDataURL(f);
 }
-
 function removeImg(e){
   e.stopPropagation();
   $('img-input').value='';
@@ -456,140 +515,458 @@ function removeImg(e){
   $('ocr-status').classList.add('hidden');
   $('img-result').classList.add('hidden');
 }
-
 function preprocessImage(imgData){
   return new Promise(function(resolve){
-    var c = document.createElement('canvas');
-    var ctx = c.getContext('2d');
-    var img = new Image();
-    img.onload = function(){
-      c.width = img.width;
-      c.height = img.height;
-      ctx.drawImage(img, 0, 0);
-      var d = ctx.getImageData(0, 0, c.width, c.height);
-      var px = d.data;
-      for(var i=0; i<px.length; i+=4){
-        var r=px[i], g=px[i+1], b=px[i+2];
-        var gray = 0.299*r + 0.587*g + 0.114*b;
-        var adj = gray > 128 ? Math.min(255, gray*1.2) : Math.max(0, gray*0.8);
+    var c=document.createElement('canvas'), ctx=c.getContext('2d'), img=new Image();
+    img.onload=function(){
+      c.width=img.width; c.height=img.height; ctx.drawImage(img,0,0);
+      var d=ctx.getImageData(0,0,c.width,c.height), px=d.data;
+      for(var i=0;i<px.length;i+=4){
+        var gray=0.299*px[i]+0.587*px[i+1]+0.114*px[i+2];
+        var adj=gray>128?Math.min(255,gray*1.2):Math.max(0,gray*0.8);
         px[i]=px[i+1]=px[i+2]=adj;
       }
-      ctx.putImageData(d,0,0);
-      resolve(c.toDataURL('image/png'));
+      ctx.putImageData(d,0,0); resolve(c.toDataURL('image/png'));
     };
-    img.src = imgData;
+    img.src=imgData;
   });
 }
-
 function runOCR(imgData){
-  var st = $('ocr-status');
-  var ex = $('extracted-container');
-  var et = $('extracted-text');
-  var pb = $('ocr-bar');
-
-  st.classList.remove('hidden');
-  ex.classList.add('hidden');
-  $('ocr-status-text').textContent = 'Preprocessing image...';
-  pb.style.width='10%';
-
+  var st=$('ocr-status'), ex=$('extracted-container'), et=$('extracted-text'), pb=$('ocr-bar');
+  st.classList.remove('hidden'); ex.classList.add('hidden');
+  $('ocr-status-text').textContent='Preprocessing image…'; pb.style.width='10%';
   if(typeof Tesseract==='undefined'){
-    $('ocr-status-text').textContent='OCR not available';
-    showToast('Tesseract.js failed to load','error');
     et.value='OCR engine unavailable. Paste text manually.';
-    ex.classList.remove('hidden'); st.classList.add('hidden');
-    return;
+    ex.classList.remove('hidden'); st.classList.add('hidden'); return;
   }
-
   preprocessImage(imgData).then(function(processed){
-    $('ocr-status-text').textContent = 'Extracting text...';
-    pb.style.width='20%';
+    $('ocr-status-text').textContent='Extracting text…'; pb.style.width='20%';
     Tesseract.recognize(processed,'eng',{
       logger:function(m){
         if(m.status==='recognizing text'){
-          var p = Math.round(m.progress*100);
-          $('ocr-status-text').textContent='Extracting text... '+p+'%';
+          var p=Math.round(m.progress*100);
+          $('ocr-status-text').textContent='Extracting text… '+p+'%';
           pb.style.width=(20+p*0.8)+'%';
         }
       }
     }).then(function(res){
-      var txt = res.data.text.trim();
-      st.classList.add('hidden');
-      ex.classList.remove('hidden');
-      if(txt.length>0){
-        et.value=txt;
-        $('ext-chars').textContent=txt.length+' chars';
-        showToast('Text extracted! Verify and fix any errors below, then analyze.','info');
-      } else {
-        et.value='No text extracted. Try a clearer image or paste text manually.';
-        $('ext-chars').textContent='0 chars';
-        showToast('No text found in image.','info');
-      }
+      var txt=res.data.text.trim();
+      st.classList.add('hidden'); ex.classList.remove('hidden');
+      et.value=txt||'No text extracted. Try a clearer image or paste manually.';
+      $('ext-chars').textContent=(txt||'').length+' chars';
+      if(txt) showToast('Text extracted — review and correct before analyzing','info');
     }).catch(function(err){
-      st.classList.add('hidden');
-      ex.classList.remove('hidden');
-      et.value='OCR failed: '+(err.message||'Unknown error')+'\nPaste text manually.';
-      $('ext-chars').textContent=et.value.length+' chars';
-      showToast('OCR failed. Paste text manually.','error');
+      st.classList.add('hidden'); ex.classList.remove('hidden');
+      et.value='OCR failed. Paste text manually.';
+      showToast('OCR failed','error');
+    });
+  });
+}
+function analyzeImgText(){
+  var txt=$('extracted-text').value.trim();
+  if(!txt||txt.startsWith('No text')||txt.startsWith('OCR failed')){ showToast('No valid text to analyze','error'); return; }
+  if(txt.length<5){ showToast('Text too short','error'); return; }
+  var btn=$('analyze-img-btn');
+  btn.disabled=true; btn.innerHTML='<div class="spinner" style="width:1rem;height:1rem;border-width:2px"></div> Analyzing…';
+  var rd=$('img-result');
+  rd.innerHTML=getLoadingHTML('Analyzing extracted text');
+  rd.classList.remove('hidden'); runSteps();
+  callApi('/api/predict/',{text:txt,source_type:'image'},function(res){
+    showResult(rd,res,'image');
+  },function(){
+    showApiError(rd,'Analysis failed');
+  },function(){
+    btn.disabled=false; btn.innerHTML='<i class="fas fa-shield-halved"></i> Analyze Extracted Text';
+  });
+}
+
+/* ─────────────────────────────────────────────────────────
+   API CALL HELPER
+───────────────────────────────────────────────────────── */
+function callApi(endpoint, data, onSuccess, onError, onFinally){
+  var token=window.AUTH_TOKEN||'';
+  fetch(endpoint,{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+    credentials:'same-origin',
+    body:JSON.stringify(data)
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(res){
+    if(res.error){ onError&&onError(res.error); }
+    else { lastResult=res; onSuccess(res); }
+  })
+  .catch(function(e){ onError&&onError(null); })
+  .finally(function(){ onFinally&&onFinally(); });
+}
+
+function showApiError(container, msg){
+  container.innerHTML='<div class="result-card glass border border-red-500/25 text-center">'+
+    '<i class="fas fa-exclamation-triangle text-red-400 text-3xl mb-3"></i>'+
+    '<p class="text-red-400 font-semibold">'+esc(msg)+'</p></div>';
+}
+
+/* ─────────────────────────────────────────────────────────
+   RENDER RESULTS
+───────────────────────────────────────────────────────── */
+function showResult(container, r, mode){
+  var isReal=r.prediction==='REAL';
+  var col=isReal?'emerald':'red';
+  var confColor=isReal?'#34d399':'#f87171';
+  var circ=251.2, off=circ-(r.confidence/100)*circ;
+
+  // ── Sentiment percentages ──
+  var sp=r.sentiment_score||0;
+  var posP=Math.round(Math.max(0,sp)*100);
+  var negP=Math.round(Math.max(0,-sp)*100);
+  var neuP=100-posP-negP;
+
+  // ── XAI Reasons HTML ──
+  var reasonsHtml='';
+  var xaiList=r.xai_reasons||[];
+  if(xaiList.length){
+    var colors=isReal?['rgba(34,197,94,.15)','rgba(34,197,94,.12)','rgba(34,197,94,.1)']:['rgba(239,68,68,.15)','rgba(239,68,68,.12)','rgba(239,68,68,.1)'];
+    var numColors=isReal?['#34d399','#4ade80','#6ee7b7']:['#f87171','#fca5a5','#fecaca'];
+    reasonsHtml='<div class="mb-5">'+
+      '<p class="text-dark-500 text-xs font-semibold uppercase tracking-wider mb-2"><i class="fas fa-brain text-indigo-400 mr-1.5"></i>AI Reasoning (Why '+(isReal?'REAL':'FAKE')+' — specific to your text)</p>'+
+      xaiList.map(function(r,i){
+        return '<div class="xai-reason" style="border-color:'+numColors[i]+'33;background:'+colors[i]+'">'+
+          '<span class="xai-num" style="background:'+numColors[i]+'22;color:'+numColors[i]+'">'+(i+1)+'</span>'+
+          '<span>'+esc(r)+'</span>'+
+        '</div>';
+      }).join('')+
+    '</div>';
+  }
+
+  // ── Manipulation type badge ──
+  var manipType=r.manipulation_type||'None';
+  var manipHtml='';
+  if(manipType && manipType!=='None'){
+    var manipColors={Clickbait:'orange',Conspiracy:'red',Pseudoscience:'purple','Death Hoax':'red','Outdated Info':'yellow',Misattribution:'yellow',Satire:'blue','Emotional Manipulation':'pink'};
+    var mc=manipColors[manipType]||'gray';
+    manipHtml='<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold" style="background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.25);color:#fca5a5;margin-bottom:.75rem">'+
+      '<i class="fas fa-triangle-exclamation"></i> Manipulation Type: '+esc(manipType)+
+    '</div>';
+  }
+
+  // ── Keywords cloud ──
+  var kwHtml='';
+  if(r.keywords && r.keywords.length){
+    var sizes=['.9rem','.82rem','.75rem','.7rem','.75rem','.8rem','.85rem','.72rem'];
+    kwHtml='<div class="mb-5">'+
+      '<p class="text-dark-500 text-xs font-semibold uppercase tracking-wider mb-2"><i class="fas fa-hashtag text-indigo-400 mr-1.5"></i>Keywords & Topics</p>'+
+      '<div class="flex flex-wrap gap-2">'+
+        r.keywords.map(function(k,i){
+          return '<span class="kw-tag" style="font-size:'+sizes[i%sizes.length]+';animation-delay:'+(i*.15)+'s">'+
+            '<i class="fas fa-tag text-indigo-400/60" style="font-size:.62rem"></i>'+esc(k)+'</span>';
+        }).join('')+
+      '</div></div>';
+  }
+
+  // ── Suspicious phrases ──
+  var suspHtml='';
+  var suspList=r.suspicious_phrases||[];
+  if(suspList.length){
+    suspHtml='<div class="mb-5 p-4 glass rounded-xl border border-red-500/20">'+
+      '<p class="text-dark-500 text-xs font-semibold uppercase tracking-wider mb-2"><i class="fas fa-triangle-exclamation text-red-400 mr-1.5"></i>Suspicious Patterns Detected</p>'+
+      '<div class="flex flex-wrap gap-2">'+suspList.map(function(p){
+        return '<span class="kw-tag susp-tag"><i class="fas fa-exclamation-circle" style="font-size:.62rem"></i>'+esc(p)+'</span>';
+      }).join('')+'</div></div>';
+  }
+
+  // ── Source credibility ──
+  var credHtml='';
+  var cred=r.source_credibility;
+  if(cred){
+    var cls=cred.label==='Trusted'?'cred-trusted':cred.label==='Suspicious'?'cred-suspicious':'cred-moderate';
+    var credIcon=cred.label==='Trusted'?'fa-circle-check':cred.label==='Suspicious'?'fa-circle-xmark':'fa-circle-question';
+    credHtml='<div class="mb-5 glass rounded-xl p-4 border border-dark-700/40">'+
+      '<p class="text-dark-500 text-xs font-semibold uppercase tracking-wider mb-3"><i class="fas fa-globe text-teal-400 mr-1.5"></i>Source Credibility</p>'+
+      '<div class="flex items-center gap-4 flex-wrap">'+
+        '<span class="cred-badge '+cls+'"><i class="fas '+credIcon+'"></i>'+esc(cred.label)+'</span>'+
+        '<div class="flex items-center gap-2"><span class="text-dark-400 text-sm">Trust Score:</span>'+
+          '<div class="flex-1 w-32 h-2.5 bg-dark-700 rounded-full overflow-hidden">'+
+            '<div class="h-full rounded-full transition-all" style="width:'+cred.score+'%;background:'+(cred.score>=70?'#34d399':cred.score>=45?'#fbbf24':'#f87171')+'"></div>'+
+          '</div>'+
+          '<span class="font-bold text-sm" style="color:'+(cred.score>=70?'#34d399':cred.score>=45?'#fbbf24':'#f87171')+'">'+cred.score+'/100</span>'+
+        '</div>'+
+        (cred.https?'<span class="text-xs text-emerald-400"><i class="fas fa-lock mr-1"></i>HTTPS</span>':'<span class="text-xs text-red-400"><i class="fas fa-lock-open mr-1"></i>No HTTPS</span>')+
+        (cred.domain?'<span class="text-xs text-dark-400">'+esc(cred.domain)+'</span>':'')+
+      '</div>'+
+    '</div>';
+  }
+
+  // ── URL extracted title ──
+  var extractedHtml='';
+  if(r.extracted_title){
+    extractedHtml='<div class="mb-4 glass rounded-xl p-3 border border-teal-500/20">'+
+      '<p class="text-dark-500 text-xs uppercase tracking-wider mb-1"><i class="fas fa-file-lines text-teal-400 mr-1"></i>Extracted Article</p>'+
+      '<p class="text-white text-sm font-semibold">'+esc(r.extracted_title)+'</p>'+
+      (r.extracted_text_preview?'<p class="text-dark-400 text-xs mt-1 line-clamp-2">'+esc(r.extracted_text_preview)+'</p>':'')+
+    '</div>';
+  }
+
+  // ── Fact checks / News sources ──
+  var fcHtml='';
+  var fcList=(r.fact_checks||[]).slice(0,5);
+  if(fcList.length){
+    fcHtml='<div class="mb-5">'+
+      '<p class="text-dark-500 text-xs font-semibold uppercase tracking-wider mb-2"><i class="fas fa-check-double text-indigo-400 mr-1.5"></i>Verified Sources & Context</p>'+
+      '<div class="space-y-2">'+
+      fcList.map(function(fc){
+        var rc='text-yellow-400', rl=(fc.rating||'').toLowerCase();
+        if(rl.includes('false')||rl.includes('fake')) rc='text-red-400';
+        else if(rl.includes('true')||rl.includes('correct')||rl.includes('trusted')) rc='text-emerald-400';
+        var claimEl='<span class="text-dark-200 text-xs">' + esc((fc.claim||'').substring(0,100)) + '</span>';
+        if(fc.url) claimEl='<a href="'+esc(fc.url)+'" target="_blank" rel="noopener noreferrer" class="text-dark-200 text-xs hover:text-indigo-300 transition-colors">'+esc((fc.claim||'').substring(0,100))+'</a>';
+        return '<div class="source-card">'+
+          '<div class="flex items-start gap-2">'+
+            '<i class="fas fa-newspaper text-indigo-400/60 mt-0.5 text-xs flex-shrink-0"></i>'+
+            '<div class="flex-1 min-w-0">'+claimEl+
+              '<div class="flex items-center gap-2 mt-0.5 flex-wrap">'+
+                '<span class="'+rc+' text-xs font-medium">'+esc(fc.rating||'Referenced')+'</span>'+
+                (fc.source?'<span class="text-dark-500 text-xs">'+esc(fc.source)+'</span>':'')+
+                (fc.published?'<span class="text-dark-600 text-xs">'+esc(fc.published)+'</span>':'')+
+              '</div>'+
+            '</div>'+
+          '</div>'+
+        '</div>';
+      }).join('')+
+    '</div></div>';
+  }
+
+  // ── Unique canvas ID for sentiment chart ──
+  var chartId='sc-'+Date.now();
+
+  var html='<div class="result-card glass border-2" style="border-color:rgba('+(isReal?'34,197,94':'239,68,68')+',.3)">'+
+
+    // Top verdict + meta
+    '<div class="flex items-center justify-between gap-3 mb-5 flex-wrap">'+
+      '<div class="flex items-center gap-2 flex-wrap">'+
+        '<span class="'+(isReal?'badge-real':'badge-fake')+' text-base px-4 py-1.5">'+
+          '<i class="fas '+(isReal?'fa-circle-check':'fa-circle-xmark')+' mr-1.5"></i>'+r.prediction+
+        '</span>'+
+        '<span class="text-xs bg-dark-800/50 px-2.5 py-1 rounded-full border border-dark-700/30 text-dark-300">'+esc(r.category||'General')+'</span>'+
+        '<span class="text-xs bg-dark-800/50 px-2.5 py-1 rounded-full border border-dark-700/30 text-dark-400">'+esc(r.method||'AI')+'</span>'+
+        '<span class="text-xs bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 text-emerald-400">'+
+          '<i class="fas fa-newspaper mr-1"></i>'+(r.trusted_source_count||0)+' trusted sources'+
+        '</span>'+
+      '</div>'+
+      '<div class="flex items-center gap-2">'+
+        '<span class="text-dark-600 text-xs"><i class="far fa-clock mr-1"></i>'+(r.processing_time||0)+'s</span>'+
+        '<button onclick="openPdfModal()" class="text-xs text-dark-400 hover:text-red-400 transition-colors px-2 py-1 border border-dark-700/30 rounded-lg hover:border-red-500/30"><i class="fas fa-file-pdf mr-1"></i>PDF</button>'+
+      '</div>'+
+    '</div>'+
+
+    // Main verdict box
+    '<div class="rounded-xl p-4 mb-5 border" style="background:rgba('+(isReal?'34,197,94':'239,68,68')+',.06);border-color:rgba('+(isReal?'34,197,94':'239,68,68')+',.2)">'+
+      '<p class="text-white text-lg font-bold mb-1">'+(isReal?'✓ REAL NEWS':'✗ FAKE NEWS')+'</p>'+
+      '<p class="text-dark-300 text-sm">'+(isReal?'Supported by trusted sources and AI verification.':'Conflicts with fact-check data or contains misinformation signals.')+'</p>'+
+    '</div>'+
+
+    manipHtml+
+    extractedHtml+
+    credHtml+
+
+    // Confidence + Sentiment
+    '<div class="grid sm:grid-cols-2 gap-5 mb-5">'+
+      // Confidence gauge
+      '<div class="glass rounded-xl p-4 border border-dark-700/30 flex flex-col items-center">'+
+        '<p class="text-dark-500 text-xs font-semibold uppercase tracking-wider mb-3">Confidence Meter</p>'+
+        '<div style="position:relative;width:110px;height:110px">'+
+          '<svg width="110" height="110" viewBox="0 0 100 100" style="transform:rotate(-90deg)">'+
+            '<circle cx="50" cy="50" r="40" fill="none" stroke="rgba(71,85,105,.25)" stroke-width="8"></circle>'+
+            '<circle cx="50" cy="50" r="40" fill="none" stroke="'+confColor+'" stroke-width="8" stroke-linecap="round" stroke-dasharray="'+circ+'" stroke-dashoffset="'+off+'" class="conf-ring"></circle>'+
+          '</svg>'+
+          '<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">'+
+            '<span style="font-size:1.6rem;font-weight:800;color:'+confColor+'">'+r.confidence+'%</span>'+
+            '<span class="text-dark-500 text-xs">Confidence</span>'+
+          '</div>'+
+        '</div>'+
+        '<div class="mt-3 grid grid-cols-2 gap-2 w-full text-center">'+
+          '<div><p class="text-dark-500 text-xs">Words</p><p class="text-white text-sm font-semibold">'+(r.word_count||0)+'</p></div>'+
+          '<div><p class="text-dark-500 text-xs">Time</p><p class="text-white text-sm font-semibold">'+(r.processing_time||0)+'s</p></div>'+
+        '</div>'+
+      '</div>'+
+      // Sentiment chart
+      '<div class="glass rounded-xl p-4 border border-dark-700/30">'+
+        '<p class="text-dark-500 text-xs font-semibold uppercase tracking-wider mb-3">Sentiment Analysis</p>'+
+        '<canvas id="'+chartId+'" height="130"></canvas>'+
+        '<div class="grid grid-cols-3 gap-1 mt-3 text-center">'+
+          '<div><p class="text-emerald-400 text-xs font-bold">'+posP+'%</p><p class="text-dark-600 text-xs">Positive</p></div>'+
+          '<div><p class="text-slate-400 text-xs font-bold">'+neuP+'%</p><p class="text-dark-600 text-xs">Neutral</p></div>'+
+          '<div><p class="text-red-400 text-xs font-bold">'+negP+'%</p><p class="text-dark-600 text-xs">Negative</p></div>'+
+        '</div>'+
+      '</div>'+
+    '</div>'+
+
+    // XAI Reasoning
+    reasonsHtml+
+
+    // AI Explanation
+    '<div class="mb-5">'+
+      '<p class="text-dark-500 text-xs font-semibold uppercase tracking-wider mb-2"><i class="fas fa-quote-left text-indigo-400 mr-1.5"></i>AI Explanation</p>'+
+      '<div class="glass rounded-xl p-4 border border-dark-700/30 relative">'+
+        '<div class="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-indigo-500 to-transparent rounded-l-xl"></div>'+
+        '<p class="text-dark-200 text-sm leading-relaxed pl-3">'+esc(r.explanation||'Analysis complete.')+'</p>'+
+      '</div>'+
+    '</div>'+
+
+    suspHtml+
+    kwHtml+
+    fcHtml+
+
+    // Action buttons
+    '<div class="flex gap-3 flex-wrap pt-3 border-t border-dark-700/30">'+
+      '<button onclick="openPdfModal()" class="flex items-center gap-2 px-4 py-2 bg-red-600/80 hover:bg-red-600 text-white text-xs font-semibold rounded-xl transition-all"><i class="fas fa-file-pdf"></i>Export PDF</button>'+
+      '<a href="/history" class="flex items-center gap-2 px-4 py-2 glass border border-dark-600/30 text-dark-300 text-xs font-semibold rounded-xl hover:text-white transition-all"><i class="fas fa-clock-rotate-left"></i>View History</a>'+
+      '<button onclick="shareResult()" class="flex items-center gap-2 px-4 py-2 glass border border-dark-600/30 text-dark-300 text-xs font-semibold rounded-xl hover:text-white transition-all"><i class="fas fa-share-nodes"></i>Share</button>'+
+    '</div>'+
+
+  '</div>';
+
+  container.innerHTML=html;
+  container.scrollIntoView({behavior:'smooth',block:'start'});
+
+  // Draw sentiment doughnut chart
+  requestAnimationFrame(function(){
+    var ctx=document.getElementById(chartId);
+    if(!ctx) return;
+    if(sentimentChart) { try{ sentimentChart.destroy(); }catch(e){} }
+    sentimentChart=new Chart(ctx,{
+      type:'doughnut',
+      data:{
+        labels:['Positive','Neutral','Negative'],
+        datasets:[{data:[posP,neuP,negP],backgroundColor:['rgba(34,197,94,.7)','rgba(100,116,139,.5)','rgba(239,68,68,.7)'],borderColor:['#34d399','#64748b','#ef4444'],borderWidth:1.5,hoverOffset:5}]
+      },
+      options:{
+        responsive:true,cutout:'68%',
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){ return c.label+': '+c.raw+'%'; }}}},
+        animation:{duration:1000}
+      }
     });
   });
 }
 
-function analyzeImgText(){
-  var txt = $('extracted-text').value.trim();
-  if(!txt||txt.startsWith('No text')||txt.startsWith('OCR failed')||txt.startsWith('OCR engine')){
-    showToast('No valid text to analyze.','error'); return;
+/* ─────────────────────────────────────────────────────────
+   PDF EXPORT
+───────────────────────────────────────────────────────── */
+function openPdfModal(){
+  if(!lastResult){ showToast('Run an analysis first','error'); return; }
+  $('pdf-modal').style.display='flex';
+}
+function closePdfModal(){ $('pdf-modal').style.display='none'; }
+
+function generatePDF(){
+  if(!lastResult){ return; }
+  closePdfModal();
+  if(typeof jspdf==='undefined'){ showToast('PDF library loading…','info'); return; }
+  var doc=new jspdf.jsPDF();
+  var r=lastResult;
+  var y=20;
+
+  doc.setFillColor(15,23,42);
+  doc.rect(0,0,210,297,'F');
+
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(18);
+  doc.setTextColor(129,140,248);
+  doc.text('AI Fake News Detection Report',105,y,{align:'center'});
+  y+=8;
+
+  doc.setFontSize(8);
+  doc.setTextColor(100,116,139);
+  doc.text('Generated: '+new Date().toLocaleString()+'  |  AI Fake News Detector',105,y,{align:'center'});
+  y+=12;
+
+  doc.setFillColor(30,41,59);
+  doc.roundedRect(10,y,190,22,3,3,'F');
+  doc.setFontSize(14);
+  doc.setFont('helvetica','bold');
+  doc.setTextColor(r.prediction==='REAL'?52:239, r.prediction==='REAL'?211:68, r.prediction==='REAL'?153:68);
+  doc.text((r.prediction==='REAL'?'✓ REAL NEWS':'✗ FAKE NEWS')+' — '+r.confidence+'% Confidence',15,y+8);
+  doc.setFontSize(9);
+  doc.setTextColor(100,116,139);
+  doc.text('Method: '+r.method+'   |   Category: '+r.category+'   |   Processing: '+r.processing_time+'s',15,y+16);
+  y+=28;
+
+  if(r.xai_reasons&&r.xai_reasons.length){
+    doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(165,180,252);
+    doc.text('AI Reasoning:',15,y); y+=6;
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(203,213,225);
+    r.xai_reasons.forEach(function(reason,i){
+      var lines=doc.splitTextToSize((i+1)+'. '+reason, 175);
+      doc.text(lines,15,y); y+=lines.length*5+2;
+    });
+    y+=3;
   }
-  if(txt.length<5){ showToast('Text too short.','error'); return; }
 
-  var btn = $('analyze-img-btn');
-  btn.disabled=true; btn.innerHTML='<div class="spinner"></div> Analyzing...';
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(165,180,252);
+  doc.text('Explanation:',15,y); y+=6;
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(203,213,225);
+  var expLines=doc.splitTextToSize(r.explanation||'N/A',175);
+  doc.text(expLines,15,y); y+=expLines.length*5+6;
 
-  var rd = $('img-result');
-  rd.innerHTML = getLoadingHTML('Analyzing extracted text');
-  rd.classList.remove('hidden');
-  runSteps();
+  if(r.keywords&&r.keywords.length){
+    doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(165,180,252);
+    doc.text('Keywords: ',15,y); y+=5;
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(148,163,184);
+    doc.text(r.keywords.join(', '),15,y); y+=8;
+  }
 
-  var token = window.AUTH_TOKEN || '';
-  fetch('/api/predict/',{
-    method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-    credentials:'same-origin',
-    body:JSON.stringify({text:txt, source_type:'image'})
-  })
-  .then(function(r){ return r.json(); })
-  .then(function(res){
-    if(res.error){
-      rd.innerHTML = '<div class="glass rounded-2xl p-8 border-2 border-red-500/25 text-center animate-fade-in">'+
-        '<i class="fas fa-exclamation-triangle text-5xl text-red-400 mb-4"></i><p class="text-red-400 font-medium text-lg">'+res.error+'</p></div>';
-      showToast(res.error,'error'); return;
-    }
-    showResult(rd, res);
-  })
-  .catch(function(){
-    rd.innerHTML = '<div class="glass rounded-2xl p-8 border-2 border-red-500/25 text-center animate-fade-in">'+
-      '<i class="fas fa-exclamation-triangle text-5xl text-red-400 mb-4"></i><p class="text-red-400 font-medium text-lg">Analysis failed</p></div>';
-    showToast('Analysis failed.','error');
-  })
-  .finally(function(){
-    btn.disabled=false; btn.innerHTML='<i class="fas fa-shield"></i> Analyze Extracted Text';
+  if(r.manipulation_type&&r.manipulation_type!=='None'){
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(252,165,165);
+    doc.text('Manipulation Type: '+r.manipulation_type,15,y); y+=8;
+  }
+
+  if(r.source_credibility){
+    var cred=r.source_credibility;
+    doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(165,180,252);
+    doc.text('Source Credibility:',15,y); y+=6;
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(203,213,225);
+    doc.text('Domain: '+cred.domain+'  |  Score: '+cred.score+'/100  |  Rating: '+cred.label+'  |  HTTPS: '+(cred.https?'Yes':'No'),15,y); y+=8;
+  }
+
+  doc.setFontSize(7); doc.setTextColor(51,65,85);
+  doc.text('AI Fake News Detector — MCA Final Year Project — Not for legal use',105,290,{align:'center'});
+
+  doc.save('fake-news-report-'+Date.now()+'.pdf');
+  showToast('PDF downloaded!','success');
+}
+
+/* ─────────────────────────────────────────────────────────
+   SHARE
+───────────────────────────────────────────────────────── */
+function shareResult(){
+  if(!lastResult) return;
+  var msg='News Fact-Check Result: '+lastResult.prediction+' ('+lastResult.confidence+'% confidence)\nPowered by AI Fake News Detector';
+  if(navigator.share){
+    navigator.share({title:'Fact-Check Result',text:msg,url:window.location.href}).catch(function(){});
+  } else {
+    navigator.clipboard.writeText(msg+'\n'+window.location.href).then(function(){ showToast('Result copied to clipboard!','success'); });
+  }
+}
+
+/* ─────────────────────────────────────────────────────────
+   DRAG & DROP
+───────────────────────────────────────────────────────── */
+var dz=$('drop-zone');
+if(dz){
+  dz.addEventListener('dragover',function(e){ e.preventDefault(); this.classList.add('active'); $('scan-line').style.display='block'; });
+  dz.addEventListener('dragleave',function(){ this.classList.remove('active'); $('scan-line').style.display='none'; });
+  dz.addEventListener('drop',function(e){
+    e.preventDefault(); this.classList.remove('active'); $('scan-line').style.display='none';
+    var f=e.dataTransfer.files[0];
+    if(f&&f.type.startsWith('image/')){ $('img-input').files=e.dataTransfer.files; handleImg($('img-input')); }
+    else showToast('Please drop an image file','error');
   });
 }
 
-// ===== DRAG & DROP =====
-var dz = $('drop-zone');
-dz.addEventListener('dragover',function(e){ e.preventDefault(); this.classList.add('active'); $('scan-line').style.display='block'; });
-dz.addEventListener('dragleave',function(){ this.classList.remove('active'); $('scan-line').style.display='none'; });
-dz.addEventListener('drop',function(e){
-  e.preventDefault();
-  this.classList.remove('active');
-  $('scan-line').style.display='none';
-  var f = e.dataTransfer.files[0];
-  if(f&&f.type.startsWith('image/')){ $('img-input').files=e.dataTransfer.files; handleImg($('img-input')); }
-  else showToast('Please drop an image file','error');
-});
-
-// ===== ?text= QUERY PARAM =====
-var qp = new URL(window.location.href).searchParams.get('text');
+/* ─────────────────────────────────────────────────────────
+   QUERY PARAM ?text=
+───────────────────────────────────────────────────────── */
+var qp=new URL(window.location.href).searchParams.get('text');
 if(qp){ ta.value=decodeURIComponent(qp); ta.dispatchEvent(new Event('input')); }
 </script>
+{% endblock %}
 {% endblock %}

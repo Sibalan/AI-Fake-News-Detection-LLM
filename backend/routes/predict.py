@@ -1,10 +1,11 @@
 from flask import Blueprint, request, jsonify, session as flask_session
-from flask_jwt_extended import jwt_required, get_jwt_identity, decode_token
+from flask_jwt_extended import decode_token
 from models.news import NewsHistory
 from models.prediction import PredictionLog
 from models import db
 from ml.preprocess import preprocess_text, extract_keywords
 from utils.helpers import analyze_sentiment, find_suspicious_phrases
+from utils.url_extractor import extract_article_from_url, check_domain_credibility
 from ollama_client import analyze_with_phi3
 import time
 import re
@@ -15,63 +16,17 @@ predict_bp = Blueprint("predict", __name__, url_prefix="/api/predict")
 
 
 LOGO_SOURCE_NAMES = [
-    "the hindu",
-    "indian express",
-    "times of india",
-    "hindustan times",
-    "reuters",
-    "associated press",
-    "ap news",
-    "bbc news",
-    "ndtv",
-    "india today",
-    "economic times",
-    "livemint",
-    "mint",
-    "pib",
-    "press information bureau",
-    "press trust of india",
-    "pti",
-    "the wire",
-    "the quint",
-    "the print",
-    "alt news",
-    "boom live",
-    "fact checker",
-    "fact check",
-    "verified source",
-    "trusted source",
-    "verified by",
-    "fact checked by",
-    "source:",
-    "credit:",
-    "photo:",
-    "image:",
-    "getty",
-    "istock",
-    "shutterstock",
-    "newspaper",
-    "daily mail",
-    "the guardian",
-    "washington post",
-    "new york times",
-    "fox news",
-    "cnn",
-    "msnbc",
-    "al jazeera",
-    "the times",
-    "the sun",
-    "daily mirror",
-    "the telegraph",
-    "the independent",
-    "the spectator",
-    "economist",
-    "news18",
-    "republic world",
-    "times now",
-    "mirror now",
-    "opindia",
-    "swarajya",
+    "the hindu", "indian express", "times of india", "hindustan times",
+    "reuters", "associated press", "ap news", "bbc news", "ndtv", "india today",
+    "economic times", "livemint", "mint", "pib", "press information bureau",
+    "press trust of india", "pti", "the wire", "the quint", "the print",
+    "alt news", "boom live", "fact checker", "fact check", "verified source",
+    "trusted source", "verified by", "fact checked by", "source:", "credit:",
+    "photo:", "image:", "getty", "istock", "shutterstock", "newspaper",
+    "daily mail", "the guardian", "washington post", "new york times", "fox news",
+    "cnn", "msnbc", "al jazeera", "the times", "the sun", "daily mirror",
+    "the telegraph", "the independent", "the spectator", "economist",
+    "news18", "republic world", "times now", "mirror now", "opindia", "swarajya",
 ]
 
 
@@ -87,7 +42,6 @@ def clean_ocr_text(text: str) -> str:
             continue
         cleaned_lines.append(stripped)
     text = " ".join(cleaned_lines)
-
     text = re.sub(r"\s+", " ", text)
     text = re.sub(r"(.)\1{4,}", r"\1\1\1", text)
     text = re.sub(r"\b(\w)\s(?=\w\s)", r"\1", text)
@@ -119,98 +73,112 @@ def get_current_user_id():
     return flask_session.get("user_id")
 
 
+def _run_analysis(news_text: str, source_url: str, source_type: str):
+    """Core analysis pipeline — shared between text and URL routes."""
+    start_time = time.time()
+
+    cleaned = clean_ocr_text(news_text)
+    if cleaned != news_text:
+        logger.info(f"OCR text cleaned: {len(news_text)} -> {len(cleaned)} chars")
+        news_text = cleaned
+
+    preprocessed = preprocess_text(news_text)
+    keywords = extract_keywords(news_text)
+    sentiment, sentiment_score = analyze_sentiment(news_text)
+    suspicious = find_suspicious_phrases(news_text)
+
+    phi3_result = analyze_with_phi3(news_text)
+
+    prediction = phi3_result["prediction"]
+    confidence = phi3_result["confidence"]
+    explanation = phi3_result["explanation"]
+    fact_checks = phi3_result.get("fact_checks", [])
+    llm_source = phi3_result.get("llm_source", "")
+    category = phi3_result.get("category", "General")
+    method_label = phi3_result.get("method") or (llm_source if llm_source else "AI")
+
+    # XAI fields from structured Groq response
+    xai_reasons = phi3_result.get("xai_reasons", [])
+    xai_suspicious = phi3_result.get("xai_suspicious_phrases", suspicious)
+    manipulation_type = phi3_result.get("manipulation_type", "None")
+    news_api_articles = phi3_result.get("news_api_articles", [])
+
+    processing_time = round(time.time() - start_time, 2)
+
+    user_id = get_current_user_id()
+    try:
+        history = NewsHistory(
+            user_id=user_id,
+            news_text=news_text,
+            prediction=prediction,
+            confidence=confidence,
+            explanation=explanation,
+            sentiment=sentiment,
+            sentiment_score=sentiment_score,
+            keywords=",".join(keywords),
+            suspicious_phrases=",".join(xai_suspicious or suspicious),
+            source_url=source_url or None,
+            source_type=source_type,
+            processing_time=processing_time,
+            method="phi3",
+        )
+        db.session.add(history)
+
+        log = PredictionLog(
+            user_id=user_id,
+            news_text=news_text[:500],
+            prediction=prediction,
+            confidence=confidence,
+            method="phi3",
+            processing_time=processing_time,
+            ip_address=request.remote_addr,
+        )
+        db.session.add(log)
+        db.session.commit()
+    except Exception as db_err:
+        logger.warning(f"DB save failed (prediction still works): {db_err}")
+        db.session.rollback()
+
+    return {
+        "prediction": prediction,
+        "confidence": confidence,
+        "explanation": explanation,
+        "sentiment": sentiment,
+        "sentiment_score": sentiment_score,
+        "keywords": keywords,
+        "suspicious_phrases": xai_suspicious or suspicious,
+        "word_count": preprocessed["word_count"],
+        "processing_time": processing_time,
+        "method": method_label,
+        "llm_source": llm_source,
+        "fact_checks": fact_checks,
+        "category": category,
+        "model_verdict": phi3_result.get("model_verdict"),
+        "trusted_source_count": phi3_result.get("trusted_source_count", 0),
+        "xai_reasons": xai_reasons,
+        "manipulation_type": manipulation_type,
+        "news_api_articles": news_api_articles,
+    }
+
+
 @predict_bp.route("/", methods=["POST"])
 def predict_news():
-    start_time = time.time()
     try:
         data = request.get_json()
-        news_text = data.get("text", "").strip()
-        source_url = data.get("source_url", "").strip()
-        source_type = data.get("source_type", "text").strip().lower() or "text"
+        news_text = (data.get("text") or "").strip()
+        source_url = (data.get("source_url") or "").strip()
+        source_type = (data.get("source_type") or "text").strip().lower() or "text"
 
         if not news_text:
             return jsonify({"error": "News text is required"}), 400
-
         if len(news_text) < 5:
-            return jsonify(
-                {"error": "Please enter at least 5 characters for analysis"}
-            ), 400
+            return jsonify({"error": "Please enter at least 5 characters for analysis"}), 400
 
-        cleaned = clean_ocr_text(news_text)
-        if cleaned != news_text:
-            logger.info(f"OCR text cleaned: {len(news_text)} -> {len(cleaned)} chars")
-            news_text = cleaned
+        result = _run_analysis(news_text, source_url, source_type)
 
-        user_id = get_current_user_id()
-
-        preprocessed = preprocess_text(news_text)
-        keywords = extract_keywords(news_text)
-        sentiment, sentiment_score = analyze_sentiment(news_text)
-        suspicious = find_suspicious_phrases(news_text)
-
-        phi3_result = analyze_with_phi3(news_text)
-
-        prediction = phi3_result["prediction"]
-        confidence = phi3_result["confidence"]
-        explanation = phi3_result["explanation"]
-        fact_checks = phi3_result.get("fact_checks", [])
-        llm_source = phi3_result.get("llm_source", "")
-        category = phi3_result.get("category", "General")
-
-        method_label = phi3_result.get("method") or (llm_source if llm_source else "AI")
-
-        processing_time = round(time.time() - start_time, 2)
-
-        try:
-            history = NewsHistory(
-                user_id=user_id,
-                news_text=news_text,
-                prediction=prediction,
-                confidence=confidence,
-                explanation=explanation,
-                sentiment=sentiment,
-                sentiment_score=sentiment_score,
-                keywords=",".join(keywords),
-                suspicious_phrases=",".join(suspicious),
-                source_url=source_url or None,
-                source_type=source_type,
-                processing_time=processing_time,
-                method="phi3",
-            )
-            db.session.add(history)
-
-            log = PredictionLog(
-                user_id=user_id,
-                news_text=news_text[:500],
-                prediction=prediction,
-                confidence=confidence,
-                method="phi3",
-                processing_time=processing_time,
-                ip_address=request.remote_addr,
-            )
-            db.session.add(log)
-            db.session.commit()
-        except Exception as db_err:
-            logger.warning(f"DB save failed (prediction still works): {db_err}")
-            db.session.rollback()
-
-        result = {
-            "prediction": prediction,
-            "confidence": confidence,
-            "explanation": explanation,
-            "sentiment": sentiment,
-            "sentiment_score": sentiment_score,
-            "keywords": keywords,
-            "suspicious_phrases": suspicious,
-            "word_count": preprocessed["word_count"],
-            "processing_time": processing_time,
-            "method": method_label,
-            "llm_source": llm_source,
-            "fact_checks": fact_checks,
-            "category": category,
-            "model_verdict": phi3_result.get("model_verdict"),
-            "trusted_source_count": phi3_result.get("trusted_source_count", 0),
-        }
+        # If a URL was provided, add domain credibility
+        if source_url:
+            result["source_credibility"] = check_domain_credibility(source_url)
 
         return jsonify(result), 200
 
@@ -218,3 +186,51 @@ def predict_news():
         logger.error(f"Prediction error: {e}")
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
+
+
+@predict_bp.route("/url", methods=["POST"])
+def analyze_url():
+    """Extract article from URL and analyze it."""
+    try:
+        data = request.get_json()
+        url = (data.get("url") or "").strip()
+
+        if not url:
+            return jsonify({"error": "URL is required"}), 400
+        if not url.startswith(("http://", "https://")):
+            return jsonify({"error": "URL must start with http:// or https://"}), 400
+
+        extracted = extract_article_from_url(url)
+
+        if extracted.get("error") and not extracted.get("text"):
+            return jsonify({"error": extracted["error"]}), 422
+
+        # Build analysis text from title + body
+        title = extracted.get("title", "")
+        body = extracted.get("text", "")
+        news_text = (f"{title}. {body}" if title else body).strip()
+
+        if len(news_text) < 20:
+            return jsonify({"error": "Could not extract enough readable content from this URL."}), 422
+
+        result = _run_analysis(news_text[:3000], url, "url")
+        result["extracted_title"] = title
+        result["extracted_text_preview"] = body[:500]
+        result["source_credibility"] = extracted.get("credibility")
+        result["source_domain"] = extracted.get("source", "")
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        logger.error(f"URL analysis error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@predict_bp.route("/credibility", methods=["POST"])
+def check_credibility():
+    """Quick domain credibility check without full analysis."""
+    data = request.get_json()
+    url = (data.get("url") or "").strip()
+    if not url:
+        return jsonify({"error": "URL required"}), 400
+    return jsonify(check_domain_credibility(url)), 200

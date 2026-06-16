@@ -46,6 +46,7 @@ class AdminLog(db.Model):
     admin_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     action = db.Column(db.String(255), nullable=False)
     details = db.Column(db.Text, nullable=True)
+    module = db.Column(db.String(100), nullable=True)
     ip_address = db.Column(db.String(45), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -55,6 +56,7 @@ class AdminLog(db.Model):
             "admin_id": self.admin_id,
             "action": self.action,
             "details": self.details,
+            "module": self.module,
             "ip_address": self.ip_address,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }

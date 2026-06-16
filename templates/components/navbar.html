@@ -19,12 +19,17 @@
         <a href="/dashboard" class="nav-link {% if request.path == '/dashboard' %}active{% endif %}"><i class="fas fa-chart-pie mr-1.5 text-xs"></i>Dashboard</a>
         <a href="/detect" class="nav-link {% if request.path == '/detect' %}active{% endif %}"><i class="fas fa-shield mr-1.5 text-xs"></i>Detect</a>
         <a href="/history" class="nav-link {% if request.path == '/history' %}active{% endif %}"><i class="fas fa-clock-rotate mr-1.5 text-xs"></i>History</a>
+        <a href="/news" class="nav-link {% if request.path == '/news' %}active{% endif %}"><i class="fas fa-newspaper mr-1.5 text-xs"></i>News</a>
         {% if session.is_admin %}
         <a href="/admin-panel" class="nav-link {% if request.path.startswith('/admin-panel') %}active{% endif %}"><i class="fas fa-cog mr-1.5 text-xs"></i>Admin Panel</a>
         {% endif %}
       </div>
 
       <div class="hidden md:flex items-center space-x-3">
+        <button type="button" id="theme-toggle-button" class="theme-toggle-btn">
+          <i class="fas fa-sun"></i>
+          White mode
+        </button>
         {% if session.user_id %}
         <div class="relative" id="profile-dropdown">
           <button onclick="toggleProfile()" class="flex items-center space-x-2 px-3 py-2 rounded-xl glass hover:border-primary-500/30 transition-all group">
@@ -60,6 +65,9 @@
 
   <div id="mobile-menu" class="md:hidden glass border-t border-dark-600/30 hidden">
     <div class="px-4 py-3 space-y-1">
+      <button type="button" id="theme-toggle-button-mobile" class="mobile-nav-link text-left">
+        <i class="fas fa-sun mr-2 text-accent-400"></i>White mode
+      </button>
       <a href="/" class="mobile-nav-link"><i class="fas fa-home mr-2 text-primary-400"></i>Home</a>
       <a href="/about" class="mobile-nav-link"><i class="fas fa-info-circle mr-2 text-primary-400"></i>About</a>
       <a href="/contact" class="mobile-nav-link"><i class="fas fa-envelope mr-2 text-primary-400"></i>Contact</a>
@@ -67,6 +75,7 @@
       <a href="/dashboard" class="mobile-nav-link"><i class="fas fa-chart-pie mr-2 text-accent-400"></i>Dashboard</a>
       <a href="/detect" class="mobile-nav-link"><i class="fas fa-shield mr-2 text-accent-400"></i>Detect News</a>
       <a href="/history" class="mobile-nav-link"><i class="fas fa-clock-rotate mr-2 text-accent-400"></i>History</a>
+      <a href="/news" class="mobile-nav-link"><i class="fas fa-newspaper mr-2 text-accent-400"></i>News</a>
       {% if session.is_admin %}
       <a href="/admin-panel" class="mobile-nav-link"><i class="fas fa-cog mr-2 text-accent-400"></i>Admin Panel</a>
       {% endif %}

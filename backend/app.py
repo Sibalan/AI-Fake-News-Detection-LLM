@@ -46,11 +46,13 @@ def create_app():
     from routes.predict import predict_bp
     from routes.history import history_bp
     from routes.admin import admin_bp
+    from routes.news import news_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(predict_bp)
     app.register_blueprint(history_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(news_bp)
 
     def login_required(f):
         from functools import wraps
@@ -133,6 +135,13 @@ def create_app():
                 flask_session["is_admin"] = user.is_admin
                 flask_session["jwt_token"] = token
 
+                if user.is_admin:
+                    from routes.admin import log_admin_action
+                    log_admin_action(
+                        user.id, f"Admin login: {user.username}",
+                        details="Session started", ip=request.remote_addr, module="Auth"
+                    )
+
                 flash("Welcome back!", "success")
                 return redirect(url_for("dashboard_page"))
             else:
@@ -198,6 +207,12 @@ def create_app():
 
     @app.route("/logout")
     def logout():
+        if flask_session.get("is_admin") and flask_session.get("user_id"):
+            from routes.admin import log_admin_action
+            log_admin_action(
+                flask_session["user_id"], f"Admin logout: {flask_session.get('username', '')}",
+                details="Session ended", ip=request.remote_addr, module="Auth"
+            )
         flask_session.clear()
         flash("Signed out successfully", "success")
         return redirect(url_for("home_page"))
@@ -216,6 +231,16 @@ def create_app():
     @login_required
     def history_page():
         return render_template("history.html")
+
+    @app.route("/news")
+    @login_required
+    def news_page():
+        return render_template("news.html")
+
+    @app.route("/admin-logs")
+    @admin_required
+    def admin_logs_page():
+        return render_template("admin_logs.html")
 
     @app.route("/change-password", methods=["GET", "POST"])
     @login_required
@@ -257,6 +282,56 @@ def create_app():
     @login_required
     def admin_panel_page():
         return render_template("admin_panel.html")
+
+    @app.route("/admin-login", methods=["GET", "POST"])
+    def admin_login_page():
+        if flask_session.get("is_admin"):
+            return redirect(url_for("admin_panel_page"))
+
+        # Clear any existing non-admin session so login form shows
+        if "user_id" in flask_session and not flask_session.get("is_admin"):
+            flask_session.clear()
+
+        if request.method == "POST":
+            username = request.form.get("username", "").strip()
+            password = request.form.get("password", "")
+
+            user = User.query.filter(
+                (User.username == username) | (User.email == username.lower())
+            ).first()
+
+            if user and user.check_password(password) and user.is_admin:
+                if not user.is_active:
+                    flash("Admin account is deactivated. Contact system administrator.", "error")
+                    return render_template("admin_login.html")
+
+                from flask_jwt_extended import create_access_token
+                token = create_access_token(identity=str(user.id))
+
+                flask_session["user_id"] = user.id
+                flask_session["username"] = user.username
+                flask_session["email"] = user.email
+                flask_session["full_name"] = user.full_name or user.username
+                flask_session["is_admin"] = True
+                flask_session["jwt_token"] = token
+
+                from routes.admin import log_admin_action
+                log_admin_action(
+                    user.id, f"Admin login: {user.username}",
+                    details="Admin panel access via admin login page",
+                    ip=request.remote_addr, module="Auth"
+                )
+
+                flash("Welcome to the Admin Panel!", "success")
+                return redirect(url_for("admin_panel_page"))
+            elif user and user.check_password(password) and not user.is_admin:
+                flash("This account does not have administrator privileges.", "error")
+            else:
+                flash("Invalid admin credentials. Please try again.", "error")
+
+            return render_template("admin_login.html", form_data=request.form)
+
+        return render_template("admin_login.html")
 
     # ========== API Routes ==========
 
@@ -336,6 +411,15 @@ def create_app():
                             text(
                                 "UPDATE news_history SET source_type='text' WHERE source_type IS NULL"
                             )
+                        )
+                        db.session.commit()
+
+                if "admin_logs" in inspector.get_table_names():
+                    log_cols = [c["name"] for c in inspector.get_columns("admin_logs")]
+                    if "module" not in log_cols:
+                        logger.info("Adding missing module column to admin_logs")
+                        db.session.execute(
+                            text("ALTER TABLE admin_logs ADD COLUMN module VARCHAR(100)")
                         )
                         db.session.commit()
             except Exception as migration_err:

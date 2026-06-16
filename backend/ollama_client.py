@@ -495,6 +495,60 @@ def _search_news(query: str) -> list:
     return []
 
 
+def _news_api_fetch_relevant(news_text: str) -> List[Dict[str, Any]]:
+    """Fetch top relevant News API articles for the claim.
+    Returns a list of articles sorted by relevance — used to build context for the LLM."""
+    if not NEWS_API_KEY:
+        return []
+    cache_key = "ctx_" + news_text.lower().strip()[:120]
+    cached = fact_check_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    query = _build_search_query(news_text, limit=6)
+    try:
+        resp = requests.get(
+            "https://newsapi.org/v2/everything",
+            params={
+                "q": query,
+                "apiKey": NEWS_API_KEY,
+                "pageSize": 10,
+                "sortBy": "relevancy",
+                "language": "en",
+            },
+            timeout=8,
+        )
+        if resp.status_code != 200:
+            fact_check_cache[cache_key] = []
+            return []
+        articles = resp.json().get("articles", [])
+
+        results = []
+        for a in articles[:10]:
+            title = (a.get("title") or "").strip()
+            desc = (a.get("description") or "").strip()
+            if not title:
+                continue
+            score = _relevance_score(news_text, title, desc)
+            if score >= 25:
+                results.append({
+                    "score": score,
+                    "title": title[:200],
+                    "description": desc[:180],
+                    "source": (a.get("source") or {}).get("name", ""),
+                    "url": a.get("url", ""),
+                    "published": (a.get("publishedAt") or "")[:10],
+                })
+
+        results.sort(key=lambda x: x["score"], reverse=True)
+        results = results[:5]
+        fact_check_cache[cache_key] = results
+        return results
+    except Exception as e:
+        logger.debug(f"News API fetch error: {e}")
+        return []
+
+
 def _parse_verdict(text: str) -> tuple:
     upper = text.upper()
 
@@ -1047,12 +1101,13 @@ def _heuristic_only_analysis(news_text: str) -> Dict[str, Any]:
         prediction = "UNSURE"
         confidence = 55.0
 
-    if prediction == "UNSURE" or (prediction == "REAL" and confidence < 75):
-        prediction = "FAKE"
+    if prediction == "UNSURE":
+        # Unknown claims default to REAL with low confidence — do NOT penalise recency
+        prediction = "REAL"
+        confidence = max(58.0, confidence)
         fake_reasons.append(
-            "System could not verify this claim with high confidence — treated as suspicious."
+            "No misinformation signals detected. Insufficient evidence to confirm or deny — treating as potentially real."
         )
-        confidence = max(60.0, confidence)
 
     explanation_parts = []
     if prediction == "FAKE":
@@ -1194,21 +1249,40 @@ def _smart_fallback(news_text: str) -> Dict[str, Any]:
 
 
 def analyze_with_phi3(news_text: str) -> Dict[str, Any]:
+    # Step 1: fetch all external evidence in parallel before LLM call
     fact_check_results = _google_fact_check(news_text)
     trusted_results = _search_trusted_sources(news_text)
     news_results = (
         _search_news(news_text) if NEWS_API_KEY else _fetch_rss_news(news_text)
     )
+    # Step 2: fetch multiple relevant News API articles for context
+    news_api_articles = _news_api_fetch_relevant(news_text) if NEWS_API_KEY else []
+
     category = _classify_category(news_text)
     fallback_result = _heuristic_only_analysis(news_text)
+
+    # Build rich context string from top-N articles — passed to Groq for reasoning
+    recent_context = ""
+    if news_api_articles:
+        lines = []
+        for a in news_api_articles[:4]:
+            line = f"- \"{a['title']}\""
+            if a.get("description"):
+                line += f" | {a['description'][:120]}"
+            line += f" (Source: {a['source']}, Published: {a['published']}, Relevance: {a['score']}%)"
+            lines.append(line)
+        recent_context = "\n".join(lines)
+        logger.info(f"News API context: {len(news_api_articles)} articles, top score={news_api_articles[0]['score']}")
 
     llm_response = None
     llm_source = ""
 
-    groq_raw = groq_client.analyze_with_groq(news_text)
+    groq_raw = groq_client.analyze_with_groq(news_text, recent_context=recent_context)
+    groq_structured = {}
     if groq_raw:
         llm_response = groq_raw
         llm_source = "Groq (Llama 3.3 70B)"
+        groq_structured = groq_client.parse_groq_structured(groq_raw)
         logger.info("Using Groq API for LLM inference")
     else:
         logger.info("Groq not available, falling back to Ollama Phi-3")
@@ -1264,28 +1338,36 @@ EXPLANATION: [1-2 sentences]"""
             f"Trusted-source matches from {source_names} were found for this topic."
         )
         if prediction == "REAL":
-            confidence = min(98.0, confidence + 3)
+            confidence = min(98.0, confidence + 5)
 
+    # ── News API context note (display only — Groq already reasoned with the articles) ──
+    if news_api_articles:
+        best = news_api_articles[0]
+        fact_note = (
+            f"News API found {len(news_api_articles)} related article(s): "
+            f"\"{best['title']}\" from {best['source']} "
+            f"({best['published']}, {best['score']}% relevance)."
+        )
+        # Gentle confidence boost only when LLM already agrees this is REAL
+        if prediction == "REAL" and best["score"] >= 55:
+            confidence = min(97.0, confidence + 4)
+    elif trusted_note:
+        fact_note = trusted_note
+
+    # ── Google Fact Check API ────────────────────────────────────────────────
     if fact_check_results:
         fc_info = "; ".join(
             f"{c['claim'][:70]} - {c['rating']}" for c in fact_check_results[:2]
         )
         findings_lower = " ".join(str(f).lower() for f in fact_check_results)
-        if any(
-            kw in findings_lower
-            for kw in ["false", "misleading", "fake", "incorrect", "hoax"]
-        ):
+        if any(kw in findings_lower for kw in ["false", "misleading", "fake", "incorrect", "hoax"]):
             prediction = "FAKE"
             confidence = min(99.0, confidence + 8)
             fact_note = f"External fact-check evidence flags it: {fc_info}."
-        elif any(
-            kw in findings_lower for kw in ["true", "correct", "accurate", "factual"]
-        ):
+        elif any(kw in findings_lower for kw in ["true", "correct", "accurate", "factual"]):
             prediction = "REAL"
             confidence = min(99.0, confidence + 8)
             fact_note = f"External fact-check evidence supports it: {fc_info}."
-    elif trusted_note:
-        fact_note = trusted_note
 
     explanation = _verdict_explanation(
         prediction,
@@ -1299,6 +1381,15 @@ EXPLANATION: [1-2 sentences]"""
     )
 
     all_fact_checks = (fact_check_results or [])[:3]
+    for a in news_api_articles[:3]:
+        all_fact_checks.insert(0, {
+            "claim": a["title"],
+            "rating": f"Live News API context ({a['score']}% relevance)",
+            "source": a["source"],
+            "url": a.get("url", ""),
+            "published": a.get("published", ""),
+            "trusted": a["score"] >= 55,
+        })
     for t in trusted_results[:5]:
         all_fact_checks.append(
             {
@@ -1324,6 +1415,11 @@ EXPLANATION: [1-2 sentences]"""
     if not llm_response and not groq_raw:
         method = fallback_result["method"]
 
+    # Pull structured XAI fields from Groq response when available
+    xai_reasons = groq_structured.get("reasons", [])
+    xai_suspicious = groq_structured.get("suspicious_phrases", [])
+    manipulation_type = groq_structured.get("manipulation_type", "None")
+
     return {
         "prediction": prediction,
         "confidence": round(confidence, 1),
@@ -1334,6 +1430,10 @@ EXPLANATION: [1-2 sentences]"""
         "category": category.title(),
         "model_verdict": llm_verdict,
         "trusted_source_count": len(trusted_results),
+        "xai_reasons": xai_reasons,
+        "xai_suspicious_phrases": xai_suspicious,
+        "manipulation_type": manipulation_type,
+        "news_api_articles": news_api_articles[:4],
     }
 
 
