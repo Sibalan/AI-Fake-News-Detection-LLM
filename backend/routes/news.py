@@ -1,8 +1,10 @@
 import logging
 from flask import Blueprint, request, jsonify
 
-from utils.news_api import fetch_latest_news, fetch_breaking_news, NewsApiError
-from groq_client import groq_available, summarize_text_with_groq
+from backend.models.live_article import LiveArticle
+from backend.news_ingest import search_similar_articles
+from backend.utils.news_api import fetch_latest_news, fetch_breaking_news, NewsApiError
+from backend.groq_client import groq_available, summarize_text_with_groq
 
 logger = logging.getLogger(__name__)
 news_bp = Blueprint("news", __name__)
@@ -53,9 +55,39 @@ def get_breaking_news():
     try:
         articles = fetch_breaking_news(max_articles=8)
     except NewsApiError as exc:
-        logger.warning(f"Breaking news fetch failed: {exc}")
-        return jsonify({"error": str(exc)}), 500
+     logger.warning(f"Breaking news fetch failed: {exc}")
 
+    # Return an empty list instead of crashing
+    return jsonify({
+        "articles": [],
+        "message": "Breaking news is temporarily unavailable."
+    }), 200
     # No summaries for breaking news ticker — keep it fast
     enriched = _enrich(articles, add_summary=False)
     return jsonify({"articles": enriched}), 200
+
+
+@news_bp.route("/get_live_articles", methods=["GET"])
+def get_live_articles():
+    limit = min(int(request.args.get("limit", 20)), 100)
+    articles = (
+        LiveArticle.query.order_by(LiveArticle.published_at.desc().nullslast())
+        .limit(limit)
+        .all()
+    )
+    return jsonify({"articles": [article.to_dict() for article in articles], "count": len(articles)}), 200
+
+
+@news_bp.route("/search_related", methods=["POST"])
+def search_related():
+    payload = request.get_json(silent=True) or {}
+    text = (payload.get("text") or "").strip()
+    if not text:
+        return jsonify({"error": "Text is required"}), 400
+
+    try:
+        results = search_similar_articles(text)
+    except Exception as exc:
+        logger.warning(f"Related search failed: {exc}")
+        results = []
+    return jsonify({"results": results, "count": len(results)}), 200

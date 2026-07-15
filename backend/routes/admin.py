@@ -1,9 +1,9 @@
 from flask import Blueprint, request, jsonify, session as flask_session
 from flask_jwt_extended import jwt_required, get_jwt_identity, decode_token
-from models.user import User, AdminLog
-from models.news import NewsHistory, Dataset
-from models.prediction import PredictionLog
-from models import db
+from backend.models.user import User, AdminLog, ContactMessage
+from backend.models.news import NewsHistory, Dataset
+from backend.models.prediction import PredictionLog
+from backend.models import db
 import logging
 
 logger = logging.getLogger(__name__)
@@ -130,27 +130,86 @@ def get_dashboard(admin_id):
     try:
         total_users = User.query.count()
         active_users = User.query.filter_by(is_active=True).count()
+        admin_count = User.query.filter_by(is_admin=True).count()
         total_predictions = PredictionLog.query.count()
         total_history = NewsHistory.query.count()
 
         real_count = NewsHistory.query.filter_by(prediction="REAL").count()
         fake_count = NewsHistory.query.filter_by(prediction="FAKE").count()
+        daily_scans = NewsHistory.query.filter(
+            NewsHistory.created_at >= db.func.dateadd(db.text("day"), -1, db.func.now())
+        ).count()
 
         recent_predictions = (
             PredictionLog.query.order_by(PredictionLog.created_at.desc())
             .limit(10)
             .all()
         )
+        recent_history = (
+            NewsHistory.query.order_by(NewsHistory.created_at.desc()).limit(8).all()
+        )
+
+        keyword_rows = (
+            db.session.query(
+                NewsHistory.keywords,
+                db.func.count(NewsHistory.id).label("count"),
+            )
+            .filter(NewsHistory.keywords != None)
+            .group_by(NewsHistory.keywords)
+            .order_by(db.desc("count"))
+            .limit(6)
+            .all()
+        )
+        top_keywords = []
+        for keywords, count in keyword_rows:
+            if keywords:
+                for term in keywords.split(","):
+                    clean_term = term.strip().title()
+                    if clean_term:
+                        top_keywords.append({"term": clean_term, "count": count})
+                        break
+
+        source_type_breakdown = {}
+        for source_type in NewsHistory.query.with_entities(NewsHistory.source_type).distinct():
+            type_name = source_type[0] or "text"
+            source_type_breakdown[type_name] = NewsHistory.query.filter_by(source_type=type_name).count()
+
+        timeline = []
+        for day in range(7):
+            from datetime import datetime, timedelta
+            current = (datetime.utcnow() - timedelta(days=day)).date().isoformat()
+            day_count = NewsHistory.query.filter(db.func.date(NewsHistory.created_at) == current).count()
+            day_real = NewsHistory.query.filter(
+                db.func.date(NewsHistory.created_at) == current,
+                NewsHistory.prediction == "REAL",
+            ).count()
+            day_fake = NewsHistory.query.filter(
+                db.func.date(NewsHistory.created_at) == current,
+                NewsHistory.prediction == "FAKE",
+            ).count()
+            timeline.append({"date": current, "total": day_count, "real": day_real, "fake": day_fake})
+
+        accuracy = 0
+        if total_history:
+            accuracy = round((real_count / total_history) * 100, 1)
 
         return jsonify(
             {
                 "total_users": total_users,
                 "active_users": active_users,
+                "admin_count": admin_count,
                 "total_predictions": total_predictions,
                 "total_history": total_history,
                 "real_count": real_count,
                 "fake_count": fake_count,
+                "daily_scans": daily_scans,
+                "detection_accuracy": accuracy,
+                "top_keywords": top_keywords[:5],
+                "most_common_source_type": max(source_type_breakdown.items(), key=lambda item: item[1], default=("text", 0))[0],
+                "source_type_breakdown": source_type_breakdown,
                 "recent_predictions": [p.to_dict() for p in recent_predictions],
+                "recent_history": [h.to_dict() for h in recent_history],
+                "timeline": list(reversed(timeline)),
             }
         ), 200
     except Exception as e:
@@ -229,6 +288,57 @@ def get_admin_logs(admin_id):
     except Exception as e:
         logger.error(f"Admin logs error: {e}")
         return jsonify({"error": "Failed to load logs"}), 500
+
+
+@admin_bp.route("/contact-messages", methods=["GET"])
+@admin_required
+def get_contact_messages(admin_id):
+    try:
+        page = request.args.get("page", 1, type=int)
+        per_page = request.args.get("per_page", 10, type=int)
+        unread_only = request.args.get("unread_only", 0, type=int)
+
+        query = ContactMessage.query.order_by(ContactMessage.created_at.desc())
+        if unread_only:
+            query = query.filter_by(is_read=False)
+
+        pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+        return jsonify(
+            {
+                "messages": [m.to_dict() for m in pagination.items],
+                "total": pagination.total,
+                "pages": pagination.pages,
+                "current_page": page,
+                "total_unread": ContactMessage.query.filter_by(is_read=False).count(),
+            }
+        ), 200
+    except Exception as e:
+        logger.error(f"Contact messages error: {e}")
+        return jsonify({"error": "Failed to load contact messages"}), 500
+
+
+@admin_bp.route("/contact-messages/<int:message_id>/read", methods=["POST"])
+@admin_required
+def mark_contact_message_read(admin_id, message_id):
+    try:
+        message = ContactMessage.query.get(message_id)
+        if not message:
+            return jsonify({"error": "Message not found"}), 404
+
+        message.is_read = True
+        db.session.commit()
+        log_admin_action(
+            admin_id,
+            f"Marked contact message #{message_id} as read",
+            f"Contact from {message.name}",
+            request.remote_addr,
+            module="Contact",
+        )
+        return jsonify({"message": "Message marked as read", "contact": message.to_dict()}), 200
+    except Exception as e:
+        logger.error(f"Mark contact message error: {e}")
+        db.session.rollback()
+        return jsonify({"error": "Failed to update message"}), 500
 
 
 @admin_bp.route("/users", methods=["POST"])

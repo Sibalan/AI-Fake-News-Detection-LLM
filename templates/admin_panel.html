@@ -13,52 +13,42 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Inter',system-ui,sans-serif;background:#020617;color:#e2e8f0;overflow:hidden;height:100vh}
-::-webkit-scrollbar{width:4px}
+body{font-family:'Inter',system-ui,sans-serif;background:linear-gradient(135deg,#020617 0%,#050816 45%,#111827 100%);color:#e2e8f0;overflow:hidden;height:100vh}
+::-webkit-scrollbar{width:6px}
 ::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:rgba(99,102,241,0.25);border-radius:10px}
-::-webkit-scrollbar-thumb:hover{background:rgba(99,102,241,0.5)}
+::-webkit-scrollbar-thumb{background:linear-gradient(180deg,rgba(99,102,241,0.35),rgba(168,85,247,0.25));border-radius:10px}
+::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,rgba(99,102,241,0.5),rgba(168,85,247,0.35))}
 @keyframes float{0%,100%{transform:translateY(0)translateX(0)}25%{transform:translateY(-25px)translateX(12px)}50%{transform:translateY(-12px)translateX(-8px)}75%{transform:translateY(-30px)translateX(6px)}}
 @keyframes pulse-glow{0%,100%{box-shadow:0 0 20px rgba(99,102,241,0.08)}50%{box-shadow:0 0 40px rgba(99,102,241,0.2)}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 @keyframes slideIn{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:translateX(0)}}
-@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
-@keyframes spin{to{transform:rotate(360deg)}}
-.glass{background:rgba(15,23,42,0.6);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(51,65,85,0.3)}
-.glass-card{background:rgba(30,41,59,0.4);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(51,65,85,0.2);transition:all 0.3s}
-.glass-card:hover{border-color:rgba(99,102,241,0.2)}
+.glass{background:rgba(10,15,30,0.72);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(129,140,248,0.16)}
+.glass-card{background:linear-gradient(135deg,rgba(15,23,42,0.65),rgba(30,41,59,0.35));backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid rgba(99,102,241,0.12);transition:all 0.3s}
+.glass-card:hover{border-color:rgba(129,140,248,0.25);transform:translateY(-1px)}
 .gradient-text{background:linear-gradient(135deg,#818cf8,#a78bfa,#e879f9);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.sidebar-link{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;color:#64748b;text-decoration:none;transition:all 0.25s;cursor:pointer;position:relative;font-size:0.85rem;font-weight:500}
+.sidebar-link{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;color:#94a3b8;text-decoration:none;transition:all 0.25s;cursor:pointer;position:relative;font-size:0.83rem;font-weight:600}
 .sidebar-link::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:0;background:linear-gradient(180deg,#6366f1,#a78bfa);border-radius:0 3px 3px 0;transition:height 0.3s}
-.sidebar-link:hover{color:#cbd5e1;background:rgba(30,41,59,0.4)}
-.sidebar-link.active{color:#818cf8;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.08)}
-.sidebar-link.active::before{height:55%}
+.sidebar-link:hover{color:#f8fafc;background:rgba(129,140,248,0.10)}
+.sidebar-link.active{color:#f8fafc;background:linear-gradient(90deg,rgba(99,102,241,0.18),rgba(129,140,248,0.10));border:1px solid rgba(129,140,248,0.18)}
+.sidebar-link.active::before{height:60%}
 .stat-card{animation:fadeUp 0.5s ease-out both}
-.stat-card:nth-child(1){animation-delay:0.03s}
-.stat-card:nth-child(2){animation-delay:0.06s}
-.stat-card:nth-child(3){animation-delay:0.09s}
-.stat-card:nth-child(4){animation-delay:0.12s}
+.stat-card:nth-child(1){animation-delay:0.03s}.stat-card:nth-child(2){animation-delay:0.06s}.stat-card:nth-child(3){animation-delay:0.09s}.stat-card:nth-child(4){animation-delay:0.12s}
 .tab-pane{animation:fadeUp 0.35s ease-out}
 .pg-btn{width:34px;height:34px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;transition:all 0.2s;cursor:pointer;font-size:0.8rem;font-weight:500;border:1px solid transparent}
 .pg-btn:hover{background:rgba(99,102,241,0.1);color:#818cf8;border-color:rgba(99,102,241,0.15)}
-.sea-inp{background:rgba(30,41,59,0.5);border:1px solid rgba(51,65,85,0.3);border-radius:10px;padding:8px 12px 8px 34px;color:#e2e8f0;font-size:0.82rem;width:100%;transition:all 0.3s;outline:none}
-.sea-inp:focus{border-color:rgba(99,102,241,0.35);box-shadow:0 0 20px rgba(99,102,241,0.05)}
+.sea-inp{background:rgba(30,41,59,0.55);border:1px solid rgba(99,102,241,0.18);border-radius:10px;padding:8px 12px 8px 34px;color:#e2e8f0;font-size:0.82rem;width:100%;transition:all 0.3s;outline:none}
+.sea-inp:focus{border-color:rgba(129,140,248,0.35);box-shadow:0 0 20px rgba(99,102,241,0.05)}
 .toast{position:fixed;top:20px;right:20px;z-index:99999;padding:12px 18px;border-radius:10px;font-size:0.82rem;font-weight:500;display:flex;align-items:center;gap:10px;transform:translateX(120%);transition:transform 0.35s cubic-bezier(0.68,-0.55,0.27,1.55);max-width:360px}
 .toast.show{transform:translateX(0)}
 .toast.suc{background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.25);color:#22c55e;backdrop-filter:blur(12px)}
 .toast.err{background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.25);color:#ef4444;backdrop-filter:blur(12px)}
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(6px);z-index:9998;display:none;align-items:center;justify-content:center}
+.modal-overlay{position:fixed;inset:0;background:rgba(2,6,23,0.72);backdrop-filter:blur(6px);z-index:9998;display:none;align-items:center;justify-content:center}
 .modal-overlay.open{display:flex}
-.modal-box{background:rgba(15,23,42,0.95);backdrop-filter:blur(30px);border:1px solid rgba(51,65,85,0.4);border-radius:16px;padding:28px;width:90%;max-width:460px;max-height:85vh;overflow-y:auto;animation:fadeUp 0.25s ease-out}
+.modal-box{background:rgba(15,23,42,0.95);backdrop-filter:blur(30px);border:1px solid rgba(129,140,248,0.16);border-radius:16px;padding:28px;width:90%;max-width:460px;max-height:85vh;overflow-y:auto;animation:fadeUp 0.25s ease-out}
 .form-inp{background:rgba(30,41,59,0.6);border:1px solid rgba(51,65,85,0.3);border-radius:10px;padding:10px 14px;color:#e2e8f0;font-size:0.85rem;width:100%;outline:none;transition:all 0.3s}
 .form-inp:focus{border-color:rgba(99,102,241,0.35);box-shadow:0 0 20px rgba(99,102,241,0.05)}
-@media(max-width:768px){
-.sidebar{position:fixed;left:-280px;top:0;bottom:0;width:260px;z-index:100;transition:left 0.3s}
-.sidebar.open{left:0}
-.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99}
-.sidebar-overlay.show{display:block}
-.main-content{margin-left:0 !important}
-}
+.badge-dot{width:8px;height:8px;border-radius:999px;background:linear-gradient(135deg,#f43f5e,#fb7185);box-shadow:0 0 12px rgba(244,63,94,0.45)}
+@media(max-width:768px){.sidebar{position:fixed;left:-280px;top:0;bottom:0;width:260px;z-index:100;transition:left 0.3s}.sidebar.open{left:0}.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99}.sidebar-overlay.show{display:block}.main-content{margin-left:0 !important}}
 </style>
 </head>
 <body>
@@ -78,6 +68,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:#020617;color:#e2e8f0;o
     <a class="sidebar-link" data-tab="history" onclick="switchTab('history')"><i class="fas fa-clock-rotate w-5 text-center"></i><span>History</span></a>
     <a class="sidebar-link" data-tab="analytics" onclick="switchTab('analytics')"><i class="fas fa-chart-line w-5 text-center"></i><span>Analytics</span></a>
     <a class="sidebar-link" data-tab="system" onclick="switchTab('system')"><i class="fas fa-microchip w-5 text-center"></i><span>System</span></a>
+    <a class="sidebar-link" data-tab="messages" onclick="switchTab('messages')"><i class="fas fa-envelope w-5 text-center"></i><span>Messages</span><span id="msgBadge" class="ml-auto hidden badge-dot"></span></a>
     <a class="sidebar-link" data-tab="logs" onclick="switchTab('logs')"><i class="fas fa-clipboard-list w-5 text-center"></i><span>Admin Logs</span></a>
     <a class="sidebar-link" data-tab="settings" onclick="switchTab('settings')"><i class="fas fa-sliders w-5 text-center"></i><span>Settings</span></a>
     <a class="sidebar-link" data-tab="reports" onclick="switchTab('reports')"><i class="fas fa-file-export w-5 text-center"></i><span>Reports</span></a>
@@ -120,6 +111,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:#020617;color:#e2e8f0;o
       <div id="tab-history" class="tab-pane hidden"></div>
       <div id="tab-analytics" class="tab-pane hidden"></div>
       <div id="tab-system" class="tab-pane hidden"></div>
+      <div id="tab-messages" class="tab-pane hidden"></div>
       <div id="tab-logs" class="tab-pane hidden"></div>
       <div id="tab-settings" class="tab-pane hidden"></div>
       <div id="tab-reports" class="tab-pane hidden"></div>
@@ -180,9 +172,9 @@ function switchTab(t){
   document.getElementById('tab-'+t).classList.remove('hidden');
   document.querySelectorAll('.sidebar-link').forEach(function(e){e.classList.remove('active')});
   var el=document.querySelector('.sidebar-link[data-tab="'+t+'"]');if(el)el.classList.add('active');
-  var T={dash:['Dashboard','System overview at a glance'],users:['User Management','Manage registered users'],history:['Prediction History','All detection records'],analytics:['Analytics','Deep insights and trends'],system:['System Health','AI engine & infrastructure status'],logs:['Admin Logs','Audit trail of actions'],settings:['Settings','System configuration'],reports:['Reports','Export data & generate reports']};
+  var T={dash:['Dashboard','System overview at a glance'],users:['User Management','Manage registered users'],history:['Prediction History','All detection records'],analytics:['Analytics','Deep insights and trends'],system:['System Health','AI engine & infrastructure status'],messages:['Contact Messages','Site inquiries and support requests'],logs:['Admin Logs','Audit trail of actions'],settings:['Settings','System configuration'],reports:['Reports','Export data & generate reports']};
   if(T[t]){document.getElementById('pgTitle').textContent=T[t][0];document.getElementById('pgSub').textContent=T[t][1]}
-  if(IS_ADMIN){if(t==='dash')ldDash();else if(t==='users')ldUsers();else if(t==='history')ldHist();else if(t==='analytics')ldAnalytics();else if(t==='system')ldSystem();else if(t==='logs')ldLogs();else if(t==='settings')ldSettings();else if(t==='reports')ldReports();}
+  if(IS_ADMIN){if(t==='dash')ldDash();else if(t==='users')ldUsers();else if(t==='history')ldHist();else if(t==='analytics')ldAnalytics();else if(t==='system')ldSystem();else if(t==='messages')ldMessages();else if(t==='logs')ldLogs();else if(t==='settings')ldSettings();else if(t==='reports')ldReports();}
   if(window.innerWidth<768){document.getElementById('sidebar').classList.remove('open');document.getElementById('sideOv').classList.remove('show')}
 }
 
@@ -392,6 +384,35 @@ function ldAnalytics(){
   }).catch(function(){document.getElementById('tab-analytics').innerHTML='<div class="glass-card rounded-2xl p-8 text-center" style="border-color:rgba(239,68,68,0.2)"><i class="fas fa-exclamation-triangle text-3xl text-red-400 mb-2"></i><p class="text-red-400 text-sm">Failed to load analytics.</p></div>'})
 }
 
+function ldMessages(){
+  apiGet('/api/admin/contact-messages?page=1&per_page=10&unread_only=1').then(function(r){return r.json()}).then(function(d){
+    var msgs=(d.messages||[]);
+    var h='<div class="glass-card rounded-2xl p-5 mb-4"><div class="flex items-center justify-between mb-4"><h3 class="text-sm font-bold text-white flex items-center gap-2"><i class="fas fa-envelope text-indigo-400"></i>Latest Contact Messages <span class="text-dark-500 text-[10px] font-normal">('+d.total_unread+' unread)</span></h3><button onclick="loadAllMessages()" class="px-3 py-2 bg-indigo-500/10 text-indigo-400 text-xs rounded-xl border border-indigo-500/20 hover:bg-indigo-500/20 transition-all">View all</button></div>';
+    if(msgs.length){
+      h+='<div class="space-y-2">';
+      msgs.forEach(function(m){
+        h+='<div class="glass rounded-xl p-3 border border-indigo-500/10"><div class="flex items-start justify-between gap-3"><div><p class="text-white text-sm font-semibold">'+(m.name||'Anonymous')+'</p><p class="text-dark-400 text-[11px]">'+(m.email||'')+'</p></div><span class="text-[10px] text-dark-500">'+fmtDate(m.created_at)+'</span></div><p class="text-dark-300 text-sm mt-2">'+(m.message||'')+'</p><div class="flex justify-end mt-3"><button onclick="markMessageRead('+m.id+')" class="px-2.5 py-1.5 text-[11px] rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-all">Mark read</button></div></div>';
+      });
+      h+='</div>';
+    } else {
+      h+='<p class="text-dark-500 text-sm text-center py-6">No new contact messages.</p>';
+    }
+    h+='</div>';
+    document.getElementById('tab-messages').innerHTML=h;
+  }).catch(function(){document.getElementById('tab-messages').innerHTML='<div class="glass-card rounded-2xl p-8 text-center" style="border-color:rgba(239,68,68,0.2)"><i class="fas fa-exclamation-triangle text-3xl text-red-400 mb-2"></i><p class="text-red-400 text-sm">Failed to load contact messages.</p></div>'});
+}
+function loadAllMessages(){
+  apiGet('/api/admin/contact-messages?page=1&per_page=20').then(function(r){return r.json()}).then(function(d){
+    var msgs=(d.messages||[]);
+    var h='<div class="glass-card rounded-2xl p-5"><div class="flex items-center justify-between mb-4"><h3 class="text-sm font-bold text-white flex items-center gap-2"><i class="fas fa-envelope-open-text text-indigo-400"></i>All Contact Messages <span class="text-dark-500 text-[10px] font-normal">('+d.total+' total)</span></h3></div>';
+    if(msgs.length){h+='<div class="space-y-2">';msgs.forEach(function(m){var stat=m.is_read?'<span class="text-[10px] text-emerald-400">Read</span>':'<span class="text-[10px] text-amber-400">Unread</span>';h+='<div class="glass rounded-xl p-3 border '+(m.is_read?'border-emerald-500/10':'border-amber-500/10')+'"><div class="flex items-start justify-between gap-3"><div><p class="text-white text-sm font-semibold">'+(m.name||'Anonymous')+'</p><p class="text-dark-400 text-[11px]">'+(m.email||'')+'</p></div><div class="text-right"><p class="text-[10px] text-dark-500">'+fmtDate(m.created_at)+'</p>'+stat+'</div></div><p class="text-dark-300 text-sm mt-2">'+(m.message||'')+'</p>'+(m.is_read?'':'<div class="flex justify-end mt-3"><button onclick="markMessageRead('+m.id+')" class="px-2.5 py-1.5 text-[11px] rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-all">Mark read</button></div>')+'</div>';});h+='</div>';} else {h+='<p class="text-dark-500 text-sm text-center py-6">No contact messages found.</p>';}h+='</div>';document.getElementById('tab-messages').innerHTML=h;}).catch(function(){toast('Unable to load messages','err');});
+}
+function markMessageRead(id){
+  apiPost('/api/admin/contact-messages/'+id+'/read',{}).then(function(r){return r.json()}).then(function(res){
+    if(res.message){ toast('Message marked as read','suc'); ldMessages(); }
+    else toast(res.error||'Failed','err');
+  });
+}
 function ldSystem(){
   var start=Date.now();
   var h='<div class="grid md:grid-cols-2 gap-4 mb-5">'+
@@ -515,7 +536,15 @@ function dlCSV(fn,rows){
 
 function fmtDate(iso){if(!iso)return'-';try{var d=new Date(iso);var n=new Date();var df=Math.floor((n-d)/1000);if(df<60)return'Just now';if(df<3600)return Math.floor(df/60)+'m ago';if(df<86400)return Math.floor(df/3600)+'h ago';if(df<604800)return Math.floor(df/86400)+'d ago';return d.toLocaleDateString()}catch(e){return iso}}
 
-if (IS_ADMIN) ldDash();
+if (IS_ADMIN) {
+  ldDash();
+  apiGet('/api/admin/contact-messages?page=1&per_page=10&unread_only=1').then(function(r){return r.json()}).then(function(d){
+    var badge=document.getElementById('msgBadge');
+    if(badge){
+      if((d.total_unread||0) > 0){ badge.classList.remove('hidden'); } else { badge.classList.add('hidden'); }
+    }
+  });
+}
 </script>
 </body>
 </html>

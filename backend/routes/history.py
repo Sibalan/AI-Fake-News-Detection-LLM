@@ -1,8 +1,8 @@
 from flask import Blueprint, request, jsonify, session as flask_session
 from flask_jwt_extended import jwt_required, get_jwt_identity, decode_token
 from sqlalchemy import inspect
-from models.news import NewsHistory
-from models import db
+from backend.models.news import NewsHistory
+from backend.models import db
 import logging
 
 logger = logging.getLogger(__name__)

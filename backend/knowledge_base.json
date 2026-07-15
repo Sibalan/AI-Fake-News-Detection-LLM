@@ -1,0 +1,23 @@
+{
+  "general_facts": {
+    "capital of india": "New Delhi",
+    "capital of west bengal": "Kolkata",
+    "capital of karnataka": "Bengaluru",
+    "capital of kerala": "Thiruvananthapuram",
+    "capital of tamil nadu": "Chennai",
+    "capital of maharashtra": "Mumbai"
+  },
+
+  "politics": {
+    "prime minister of india": "Narendra Modi",
+    "president of india": "Droupadi Murmu",
+    "chief minister of karnataka": "dk shivakumar",
+    "chief minister of kerala": "Pinarayi Vijayan",
+    "chief minister of tamil nadu": "C. Joseph Vijay",
+    "chief minister of west bengal": "Mamata Banerjee"
+  },
+
+  "sports": {
+    "ipl 2025 winner": "Royal Challengers Bengaluru"
+  }
+}

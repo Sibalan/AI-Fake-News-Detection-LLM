@@ -10,6 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
   <title>{% block title %}AI Fake News Detector{% endblock %}</title>
@@ -37,11 +38,203 @@
 
   {% include 'components/footer.html' %}
 
+  <button id="assistantFab" class="fixed bottom-5 right-5 z-50 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white shadow-[0_0_40px_rgba(129,140,248,0.35)] transition-transform hover:scale-105">
+    <i class="fas fa-robot text-xl"></i>
+  </button>
+
+  <div id="assistantPanel" class="fixed bottom-24 right-5 z-50 hidden w-[95vw] max-w-[560px] rounded-[28px] border border-indigo-500/20 bg-slate-950/95 shadow-[0_20px_80px_rgba(2,6,23,0.75)] backdrop-blur-2xl">
+    <div class="flex items-center justify-between border-b border-slate-800/70 px-4 py-3">
+      <div>
+        <p class="text-sm font-semibold text-white">AI News Verification</p>
+        <p class="text-xs text-slate-400">Evidence-based assistant</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button type="button" id="assistantRegenerate" class="rounded-lg border border-slate-700 px-2 py-1 text-xs text-slate-300">Regenerate</button>
+        <button type="button" id="assistantClear" class="rounded-lg border border-slate-700 px-2 py-1 text-xs text-slate-300">Clear</button>
+        <button type="button" id="assistantClose" class="rounded-lg border border-slate-700 px-2 py-1 text-xs text-slate-300"><i class="fas fa-xmark"></i></button>
+      </div>
+    </div>
+    <div class="relative overflow-hidden">
+      <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.18),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(236,72,153,0.18),transparent_35%)]"></div>
+      <div id="assistantMessages" class="relative max-h-[460px] space-y-3 overflow-y-auto px-4 py-3 text-sm"></div>
+    </div>
+    <form id="assistantForm" class="border-t border-slate-800/70 p-3">
+      <textarea id="assistantInput" rows="3" class="w-full rounded-2xl border border-slate-700 bg-slate-900/90 px-3 py-2 text-sm text-white outline-none focus:border-indigo-400" placeholder="Paste a headline, article, or question here..."></textarea>
+      <div class="mt-2 flex items-center justify-between gap-2">
+        <p class="text-[11px] text-slate-500">Paste a headline or claim and I’ll verify it like a modern news assistant.</p>
+        <button type="submit" id="assistantSend" class="rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 px-3 py-2 text-sm font-semibold text-white">Send</button>
+      </div>
+    </form>
+  </div>
+
   <script>
     var AUTH_TOKEN = '{{ session.get("jwt_token", "") }}';
   </script>
   <script src="{{ url_for('static', filename='js/main.js') }}"></script>
   <script src="{{ url_for('static', filename='js/api.js') }}"></script>
+  <script>
+    const assistantFab = document.getElementById('assistantFab');
+    const assistantPanel = document.getElementById('assistantPanel');
+    const assistantMessages = document.getElementById('assistantMessages');
+    const assistantInput = document.getElementById('assistantInput');
+    const assistantSend = document.getElementById('assistantSend');
+    const assistantClose = document.getElementById('assistantClose');
+    const assistantClear = document.getElementById('assistantClear');
+    const assistantRegenerate = document.getElementById('assistantRegenerate');
+    const assistantForm = document.getElementById('assistantForm');
+    let assistantLastUserMessage = '';
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\"/g, '&quot;');
+    }
+
+    function addAssistantMessage(role, content) {
+      const shell = document.createElement('div');
+      shell.className = role === 'assistant'
+        ? 'rounded-3xl border border-slate-800/80 bg-slate-900/90 p-4 text-slate-200 shadow-[0_20px_60px_rgba(15,23,42,0.35)]'
+        : 'rounded-3xl border border-indigo-500/20 bg-indigo-500/10 p-4 text-slate-100';
+
+      const title = document.createElement('div');
+      title.className = 'mb-3 flex items-center justify-between gap-2';
+      title.innerHTML = `<span class="text-[11px] uppercase tracking-[0.25em] text-slate-400">${role === 'assistant' ? 'Assistant' : 'You'}</span>`;
+
+      const body = document.createElement('div');
+      body.className = 'prose prose-invert text-sm leading-7 whitespace-pre-wrap';
+      body.textContent = content;
+
+      shell.appendChild(title);
+      shell.appendChild(body);
+
+      if (role === 'assistant') {
+        const actions = document.createElement('div');
+        actions.className = 'mt-3 flex flex-wrap items-center gap-2';
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'text-[11px] rounded-full border border-slate-700 px-2 py-1 text-slate-300 transition hover:border-slate-500 hover:text-white';
+        copyBtn.textContent = 'Copy';
+        copyBtn.addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(content);
+            copyBtn.textContent = 'Copied';
+            setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1200);
+          } catch (error) {
+            copyBtn.textContent = 'Copy failed';
+          }
+        });
+        actions.appendChild(copyBtn);
+        shell.appendChild(actions);
+      }
+
+      assistantMessages.appendChild(shell);
+      assistantMessages.scrollTop = assistantMessages.scrollHeight;
+      return { shell, body };
+    }
+
+    function toggleAssistantPanel() {
+      assistantPanel.classList.toggle('hidden');
+      if (!assistantPanel.classList.contains('hidden')) {
+        assistantInput.focus();
+      }
+    }
+
+    async function streamAssistantReply(content, bodyEl) {
+      const plainText = String(content).replace(/\r/g, '');
+      bodyEl.textContent = '';
+      for (let index = 0; index < plainText.length; index += 1) {
+        bodyEl.textContent += plainText[index];
+        assistantMessages.scrollTop = assistantMessages.scrollHeight;
+        await new Promise((resolve) => setTimeout(resolve, 12));
+      }
+      bodyEl.innerHTML = marked.parse(plainText);
+      assistantMessages.scrollTop = assistantMessages.scrollHeight;
+    }
+
+    async function sendAssistantMessage(messageOverride) {
+      const message = (messageOverride || assistantInput.value).trim();
+      if (!message) return;
+      assistantInput.value = '';
+      assistantLastUserMessage = message;
+      addAssistantMessage('user', message);
+      const pending = addAssistantMessage('assistant', 'Thinking...');
+      pending.body.classList.add('text-slate-500');
+      try {
+        const response = await fetch('/api/assistant/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message })
+        });
+        const data = await response.json();
+        if (data.reply) {
+          await streamAssistantReply(data.reply, pending.body);
+          pending.body.classList.remove('text-slate-500');
+        } else {
+          pending.body.textContent = 'I could not generate a response right now.';
+          pending.body.classList.remove('text-slate-500');
+        }
+      } catch (error) {
+        pending.body.textContent = 'The assistant is unavailable right now.';
+        pending.body.classList.remove('text-slate-500');
+      }
+    }
+
+    assistantFab.addEventListener('click', toggleAssistantPanel);
+    assistantClose.addEventListener('click', toggleAssistantPanel);
+    assistantForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      sendAssistantMessage();
+    });
+    assistantInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        sendAssistantMessage();
+      }
+    });
+    assistantClear.addEventListener('click', async () => {
+      assistantMessages.innerHTML = '';
+      await fetch('/api/assistant/reset', { method: 'POST' });
+      assistantLastUserMessage = '';
+      addAssistantMessage('assistant', 'Paste any headline or claim and I will assess it like a real-world verification assistant.');
+    });
+    assistantRegenerate.addEventListener('click', () => {
+      if (assistantLastUserMessage) {
+        sendAssistantMessage(assistantLastUserMessage);
+      }
+    });
+
+    async function loadAssistantHistory() {
+      try {
+        const response = await fetch('/api/assistant/history');
+        const data = await response.json();
+        if (Array.isArray(data.history) && data.history.length) {
+          assistantMessages.innerHTML = '';
+          data.history.forEach((entry) => {
+            if (entry.role === 'user') {
+              addAssistantMessage('user', entry.content);
+            } else if (entry.role === 'assistant') {
+              addAssistantMessage('assistant', entry.content);
+            }
+          });
+        }
+      } catch (error) {
+        console.warn('Assistant history unavailable', error);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const currentContext = {{ session.get('assistant_context', {}) | tojson }};
+      await loadAssistantHistory();
+      if (!assistantMessages.childElementCount) {
+        if (currentContext && currentContext.article_text) {
+          addAssistantMessage('assistant', 'I can use the current article context when you ask me about it, or I can verify a fresh headline or claim directly.');
+        } else {
+          addAssistantMessage('assistant', 'Paste any headline or claim and I will assess it like a real-world verification assistant.');
+        }
+      }
+    });
+  </script>
   {% block scripts %}{% endblock %}
 </body>
 </html>

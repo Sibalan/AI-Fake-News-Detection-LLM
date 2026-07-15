@@ -1,17 +1,18 @@
 {% extends "base.html" %}
 {% block title %}Sign Up | AI Fake News Detector{% endblock %}
 {% block content %}
-<div class="min-h-screen flex items-center justify-center pt-20 pb-10 px-4">
+<div class="min-h-screen flex items-center justify-center pt-20 pb-10 px-4 relative overflow-hidden">
   <div class="absolute inset-0 overflow-hidden pointer-events-none">
-    <div class="absolute top-1/4 right-1/4 w-72 h-72 bg-accent-500/10 rounded-full blur-3xl"></div>
-    <div class="absolute bottom-1/4 left-1/4 w-72 h-72 bg-primary-500/10 rounded-full blur-3xl"></div>
+    <div class="absolute top-1/4 right-1/4 w-72 h-72 bg-accent-500/10 rounded-full blur-3xl animate-pulse-slow"></div>
+    <div class="absolute bottom-1/4 left-1/4 w-72 h-72 bg-primary-500/10 rounded-full blur-3xl animate-pulse-slow"></div>
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-primary-500/5 rounded-full blur-3xl"></div>
   </div>
 
   <div class="relative w-full max-w-md animate-fade-in">
     <div class="glass rounded-3xl p-8 glow-border">
       <div class="text-center mb-8">
         <div class="w-16 h-16 bg-gradient-to-br from-primary-500 to-accent-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <i class="fas fa-user text-white text-2xl"></i>
+          <i class="fas fa-user-plus text-white text-2xl"></i>
         </div>
         <h1 class="text-2xl font-bold text-white">Create Account</h1>
         <p class="text-dark-400 mt-2">Join the fight against misinformation</p>
@@ -27,37 +28,249 @@
       {% endif %}
       {% endwith %}
 
-      <form method="POST" action="/signup" class="space-y-4">
+      <form id="signupForm" method="POST" action="/signup" class="space-y-4" novalidate>
         <div>
           <label class="block text-sm font-medium text-dark-300 mb-2">Full Name</label>
-          <input type="text" name="full_name" placeholder="John Doe" class="input-field" />
+          <div class="relative">
+            <i class="fas fa-id-card absolute left-3.5 top-1/2 -translate-y-1/2 text-dark-400"></i>
+            <input type="text" id="full_name" name="full_name" placeholder="John Doe" class="input-field pl-11" />
+          </div>
+          <p class="field-error text-red-400 text-xs mt-1 hidden"></p>
         </div>
+
         <div>
           <label class="block text-sm font-medium text-dark-300 mb-2">Username *</label>
-          <input type="text" name="username" placeholder="Choose a username" class="input-field" required />
+          <div class="relative">
+            <i class="fas fa-at absolute left-3.5 top-1/2 -translate-y-1/2 text-dark-400"></i>
+            <input type="text" id="username" name="username" placeholder="Choose a username" class="input-field pl-11" required />
+          </div>
+          <p class="field-error text-red-400 text-xs mt-1 hidden"></p>
         </div>
+
         <div>
           <label class="block text-sm font-medium text-dark-300 mb-2">Email *</label>
-          <input type="email" name="email" placeholder="your@email.com" class="input-field" required />
+          <div class="relative">
+            <i class="fas fa-envelope absolute left-3.5 top-1/2 -translate-y-1/2 text-dark-400"></i>
+            <input type="email" id="email" name="email" placeholder="your@email.com" class="input-field pl-11" required />
+          </div>
+          <p class="field-error text-red-400 text-xs mt-1 hidden"></p>
         </div>
+
         <div>
           <label class="block text-sm font-medium text-dark-300 mb-2">Password *</label>
           <div class="relative">
             <i class="fas fa-lock absolute left-3.5 top-1/2 -translate-y-1/2 text-dark-400"></i>
-            <input type="password" name="password" placeholder="Min. 6 characters" class="input-field pl-11" required />
+            <input type="password" id="password" name="password" placeholder="Min. 6 characters" class="input-field pl-11 pr-11" required />
+            <button type="button" id="togglePassword" class="absolute right-3.5 top-1/2 -translate-y-1/2 text-dark-400 hover:text-dark-200">
+              <i class="fas fa-eye"></i>
+            </button>
           </div>
+          <div class="mt-2">
+            <div class="h-1.5 w-full bg-dark-700 rounded-full overflow-hidden">
+              <div id="strengthBar" class="h-full w-0 transition-all duration-300 rounded-full"></div>
+            </div>
+            <p id="strengthText" class="text-xs text-dark-400 mt-1">Password strength</p>
+          </div>
+          <p class="field-error text-red-400 text-xs mt-1 hidden"></p>
         </div>
+
         <div>
           <label class="block text-sm font-medium text-dark-300 mb-2">Confirm Password *</label>
-          <input type="password" name="confirm_password" placeholder="Repeat your password" class="input-field" required />
+          <div class="relative">
+            <i class="fas fa-lock absolute left-3.5 top-1/2 -translate-y-1/2 text-dark-400"></i>
+            <input type="password" id="confirm_password" name="confirm_password" placeholder="Repeat your password" class="input-field pl-11 pr-11" required />
+            <button type="button" id="toggleConfirmPassword" class="absolute right-3.5 top-1/2 -translate-y-1/2 text-dark-400 hover:text-dark-200">
+              <i class="fas fa-eye"></i>
+            </button>
+          </div>
+          <p class="field-error text-red-400 text-xs mt-1 hidden"></p>
         </div>
-        <button type="submit" class="btn-primary w-full py-3.5 justify-center"><i class="fas fa-arrow-right mr-2"></i> Create Account</button>
+
+        <button type="submit" id="submitBtn" class="btn-primary w-full py-3.5 justify-center">
+          <span id="submitText"><i class="fas fa-arrow-right mr-2"></i> Create Account</span>
+          <span id="submitLoading" class="hidden items-center justify-center">
+            <i class="fas fa-circle-notch fa-spin mr-2"></i> Creating Account...
+          </span>
+        </button>
       </form>
 
       <div class="mt-6 text-center">
-        <p class="text-dark-400 text-sm">Already have an account? <a href="/login" class="text-primary-400 hover:text-primary-300 font-medium">Sign in</a></p>
+        <p class="text-dark-400 text-sm">Already have an account? <a href="/login" class="text-primary-400 hover:text-primary-300 font-medium">Sign In</a></p>
       </div>
     </div>
   </div>
 </div>
+
+<style>
+  .strength-weak { background-color: #ef4444; width: 33%; }
+  .strength-medium { background-color: #f59e0b; width: 66%; }
+  .strength-strong { background-color: #22c55e; width: 100%; }
+  #submitLoading.flex { display: flex; }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const form = document.getElementById('signupForm');
+  const fullName = document.getElementById('full_name');
+  const username = document.getElementById('username');
+  const email = document.getElementById('email');
+  const password = document.getElementById('password');
+  const confirmPassword = document.getElementById('confirm_password');
+
+  function setError(input, message) {
+    const errorEl = input.closest('div').parentElement.querySelector('.field-error');
+    if (message) {
+      errorEl.textContent = message;
+      errorEl.classList.remove('hidden');
+      input.classList.add('border-red-500');
+    } else {
+      errorEl.textContent = '';
+      errorEl.classList.add('hidden');
+      input.classList.remove('border-red-500');
+    }
+  }
+
+  function togglePasswordVisibility(buttonId, inputId) {
+    const btn = document.getElementById(buttonId);
+    const input = document.getElementById(inputId);
+    btn.addEventListener('click', function () {
+      const isPassword = input.type === 'password';
+      input.type = isPassword ? 'text' : 'password';
+      btn.querySelector('i').classList.toggle('fa-eye');
+      btn.querySelector('i').classList.toggle('fa-eye-slash');
+    });
+  }
+  togglePasswordVisibility('togglePassword', 'password');
+  togglePasswordVisibility('toggleConfirmPassword', 'confirm_password');
+
+  function getStrength(value) {
+    let score = 0;
+    if (value.length >= 6) score++;
+    if (value.length >= 10) score++;
+    if (/[A-Z]/.test(value)) score++;
+    if (/[0-9]/.test(value)) score++;
+    if (/[^A-Za-z0-9]/.test(value)) score++;
+    return score;
+  }
+
+  password.addEventListener('input', function () {
+    const bar = document.getElementById('strengthBar');
+    const text = document.getElementById('strengthText');
+    const score = getStrength(password.value);
+
+    bar.className = 'h-full transition-all duration-300 rounded-full';
+    if (!password.value) {
+      bar.style.width = '0%';
+      text.textContent = 'Password strength';
+      text.className = 'text-xs text-dark-400 mt-1';
+    } else if (score <= 2) {
+      bar.classList.add('strength-weak');
+      text.textContent = 'Weak password';
+      text.className = 'text-xs text-red-400 mt-1';
+    } else if (score <= 4) {
+      bar.classList.add('strength-medium');
+      text.textContent = 'Medium strength password';
+      text.className = 'text-xs text-yellow-400 mt-1';
+    } else {
+      bar.classList.add('strength-strong');
+      text.textContent = 'Strong password';
+      text.className = 'text-xs text-green-400 mt-1';
+    }
+
+    if (confirmPassword.value) validateConfirmPassword();
+  });
+
+  function validateFullName() {
+    setError(fullName, '');
+    return true;
+  }
+
+  function validateUsername() {
+    const value = username.value.trim();
+    if (!value) {
+      setError(username, 'Username is required');
+      return false;
+    }
+    if (value.length < 3) {
+      setError(username, 'Username must be at least 3 characters');
+      return false;
+    }
+    if (!/^[A-Za-z0-9_]+$/.test(value)) {
+      setError(username, 'Only letters, numbers, and underscores allowed');
+      return false;
+    }
+    setError(username, '');
+    return true;
+  }
+
+  function validateEmail() {
+    const value = email.value.trim();
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!value) {
+      setError(email, 'Email is required');
+      return false;
+    }
+    if (!re.test(value)) {
+      setError(email, 'Enter a valid email address');
+      return false;
+    }
+    setError(email, '');
+    return true;
+  }
+
+  function validatePassword() {
+    const value = password.value;
+    if (!value) {
+      setError(password, 'Password is required');
+      return false;
+    }
+    if (value.length < 6) {
+      setError(password, 'Password must be at least 6 characters');
+      return false;
+    }
+    setError(password, '');
+    return true;
+  }
+
+  function validateConfirmPassword() {
+    if (!confirmPassword.value) {
+      setError(confirmPassword, 'Please confirm your password');
+      return false;
+    }
+    if (confirmPassword.value !== password.value) {
+      setError(confirmPassword, 'Passwords do not match');
+      return false;
+    }
+    setError(confirmPassword, '');
+    return true;
+  }
+
+  username.addEventListener('blur', validateUsername);
+  email.addEventListener('blur', validateEmail);
+  password.addEventListener('blur', validatePassword);
+  confirmPassword.addEventListener('blur', validateConfirmPassword);
+  fullName.addEventListener('blur', validateFullName);
+
+  form.addEventListener('submit', function (e) {
+    const validUsername = validateUsername();
+    const validEmail = validateEmail();
+    const validPassword = validatePassword();
+    const validConfirm = validateConfirmPassword();
+
+    if (!(validUsername && validEmail && validPassword && validConfirm)) {
+      e.preventDefault();
+      return;
+    }
+
+    const submitBtn = document.getElementById('submitBtn');
+    const submitText = document.getElementById('submitText');
+    const submitLoading = document.getElementById('submitLoading');
+    submitBtn.disabled = true;
+    submitBtn.classList.add('opacity-80', 'cursor-not-allowed');
+    submitText.classList.add('hidden');
+    submitLoading.classList.remove('hidden');
+    submitLoading.classList.add('flex');
+  });
+});
+</script>
 {% endblock %}

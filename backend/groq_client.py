@@ -6,6 +6,7 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+
 GROQ_MODEL = "llama-3.3-70b-versatile"
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
@@ -76,6 +77,14 @@ EXPLANATION: [1-2 sentence final verdict summary referencing what specifically w
             headers=headers,
             timeout=15,
         )
+
+        print("\n========== GROQ DEBUG ==========")
+        print("Status Code:", resp.status_code)
+        try:
+            print(resp.json())
+        except Exception:
+            print(resp.text)
+        print("================================\n")
 
         if resp.status_code != 200:
             logger.warning(f"Groq API returned {resp.status_code}: {resp.text[:200]}")
@@ -173,4 +182,64 @@ def parse_groq_structured(raw: str) -> dict:
         elif line.startswith("EXPLANATION:"):
             result["explanation"] = line.split(":", 1)[1].strip()
 
+        def semantic_claim_match(claim: str, article: str) -> str:
+            """"""
+            prompt = f"""
+            try:
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[
+            {
+                "role": "user",
+                "content": prompt,
+            }
+        ],
+        temperature=0,
+        max_tokens=20,
+    )
+
+    answer = response.choices[0].message.content.strip().upper()
+
+except Exception as e:
+    logger.error(f"Semantic claim match failed: {e}")
+    return "IRRELEVANT"
+You are an expert fact-checking AI.
+
+Claim:
+{claim}
+
+Article:
+{article}
+
+Task:
+
+Does the article SUPPORT the claim?
+
+Does it CONTRADICT the claim?
+
+Or is it IRRELEVANT?
+
+Rules:
+
+- SUPPORT = The article directly confirms the claim.
+- CONTRADICT = The article directly disproves the claim.
+- IRRELEVANT = The article talks about the same topic or people but does not verify or deny the claim.
+
+Respond using ONLY ONE WORD.
+
+SUPPORT
+
+or
+
+CONTRADICT
+
+or
+
+IRRELEVANT
+"""
+    """
+    Decide whether an article SUPPORTS,
+    CONTRADICTS,
+    or is IRRELEVANT to a claim.
+    """
     return result

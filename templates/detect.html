@@ -32,7 +32,7 @@
 
 /* ─── Result card ────────────────────────────────────────── */
 .result-card{border-radius:1.25rem;padding:1.75rem;animation:fadeUp .4s ease;background:rgba(15,23,42,.75)}
-.conf-ring{transition:stroke-dashoffset 1.8s cubic-bezier(.4,0,.2,1);animation:confFill .1s ease forwards}
+.conf-ring{transition:stroke-dashoffset 1.8s cubic-bezier(.4,0,.2,1);animation:confFill 1.2s ease forwards}
 
 /* ─── XAI reasons ────────────────────────────────────────── */
 .xai-reason{display:flex;gap:.75rem;padding:.65rem .85rem;border-radius:.75rem;background:rgba(30,41,59,.5);border:1px solid rgba(51,65,85,.3);margin-bottom:.5rem;font-size:.82rem;color:#cbd5e1;line-height:1.4}
@@ -144,11 +144,19 @@
             <span id="word-count" class="bg-dark-800/50 px-2 py-1 rounded-full border border-dark-700/30">0 words</span>
             <span class="hidden sm:inline opacity-60"><kbd class="px-1.5 py-0.5 bg-dark-700/60 rounded border border-dark-600/30">Ctrl</kbd>+<kbd class="px-1.5 py-0.5 bg-dark-700/60 rounded border border-dark-600/30">Enter</kbd></span>
           </div>
-          <div class="flex gap-2">
-            <button onclick="clearText()" class="px-3 py-2 text-xs text-dark-400 border border-dark-600/30 rounded-lg hover:text-white hover:border-dark-500/50 transition-all"><i class="fas fa-eraser mr-1"></i>Clear</button>
-            <button onclick="analyzeText()" id="analyze-btn" class="btn-primary px-6 py-2.5 text-sm shadow-lg shadow-indigo-500/25">
-              <i class="fas fa-shield-halved mr-2"></i>Analyze
-            </button>
+          <div class="flex gap-2 items-center">
+              <div class="text-xs text-dark-400">Display:</div>
+              <select id="display-policy-select" class="text-xs px-2 py-1 rounded-lg bg-dark-800/50 border border-dark-600/30 text-dark-300">
+                <option value="aggressive">Real-time verification (recommended)</option>
+                <option value="conservative">Conservative (never flip FAKE→REAL)</option>
+                <option value="force_real">Force show REAL (testing)</option>
+              </select>
+              <div class="ml-auto flex gap-2">
+                <button onclick="clearText()" class="px-3 py-2 text-xs text-dark-400 border border-dark-600/30 rounded-lg hover:text-white hover:border-dark-500/50 transition-all"><i class="fas fa-eraser mr-1"></i>Clear</button>
+                <button onclick="analyzeText()" id="analyze-btn" class="btn-primary px-6 py-2.5 text-sm shadow-lg shadow-indigo-500/25">
+                  <i class="fas fa-shield-halved mr-2"></i>Analyze
+                </button>
+              </div>
           </div>
         </div>
 
@@ -319,13 +327,25 @@ function esc(v){
 }
 
 function showToast(msg, type){
-  if(typeof window.showToast === 'function'){ window.showToast(msg, type); return; }
-  var t=document.createElement('div');
-  t.className='fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl text-white text-sm font-medium shadow-xl';
-  t.style.background= type==='error' ? 'rgba(239,68,68,.9)' : type==='success' ? 'rgba(34,197,94,.9)' : 'rgba(99,102,241,.9)';
-  t.textContent=msg;
-  document.body.appendChild(t);
-  setTimeout(function(){ t.remove(); }, 3200);
+    var t = document.createElement("div");
+
+    t.className = "fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl text-white text-sm font-medium shadow-xl";
+
+    if(type === "error"){
+        t.style.background = "rgba(239,68,68,.9)";
+    }else if(type === "success"){
+        t.style.background = "rgba(34,197,94,.9)";
+    }else{
+        t.style.background = "rgba(99,102,241,.9)";
+    }
+
+    t.textContent = msg;
+
+    document.body.appendChild(t);
+
+    setTimeout(function(){
+        t.remove();
+    },3000);
 }
 
 /* ─────────────────────────────────────────────────────────
@@ -444,6 +464,8 @@ function analyzeText(){
   var data={text:text,source_type:'text'};
   var su=$('source-url').value.trim();
   if(su) data.source_url=su;
+  var policy = $('display-policy-select') ? $('display-policy-select').value : null;
+  if(policy) data.display_policy = policy;
 
   callApi('/api/predict/',data,function(res){
     showResult(rd,res,'text');
@@ -610,16 +632,39 @@ function showApiError(container, msg){
    RENDER RESULTS
 ───────────────────────────────────────────────────────── */
 function showResult(container, r, mode){
-  var isReal=r.prediction==='REAL';
-  var col=isReal?'emerald':'red';
-  var confColor=isReal?'#34d399':'#f87171';
-  var circ=251.2, off=circ-(r.confidence/100)*circ;
+  var displayPred = r.display_prediction || r.prediction;
+  var rawPred = r.raw_prediction || r.prediction;
+  var isReal = displayPred === 'REAL';
+  var col = isReal ? 'emerald' : 'red';
+  var confColor = isReal ? '#34d399' : '#f87171';
+  var circ = 251.2, off = circ - (r.confidence / 100) * circ;
 
-  // ── Sentiment percentages ──
-  var sp=r.sentiment_score||0;
-  var posP=Math.round(Math.max(0,sp)*100);
-  var negP=Math.round(Math.max(0,-sp)*100);
-  var neuP=100-posP-negP;
+  // ── Sentiment percentages (weight by confidence so low-confidence -> more neutral)
+  var sp = r.sentiment_score || 0;
+  var s = parseFloat(sp) || 0;
+  if (Math.abs(s) > 1) s = s / 100; // support 0..1 or 0..100 inputs
+  var conf = (parseFloat(r.confidence) || 0) / 100;
+  conf = Math.max(0, Math.min(1, conf));
+  var posRaw = Math.max(0, s);
+  var negRaw = Math.max(0, -s);
+  var neutralRaw = 1 - (posRaw + negRaw);
+  posRaw *= conf;
+  negRaw *= conf;
+  neutralRaw *= (0.5 + (1 - conf) * 0.5); // boost neutral when confidence low
+  var total = posRaw + negRaw + neutralRaw;
+  if (total <= 0) { posRaw = negRaw = neutralRaw = 1/3; total = 1; }
+  var posP = Math.round((posRaw / total) * 100);
+  var negP = Math.round((negRaw / total) * 100);
+  var neuP = 100 - posP - negP;
+
+  // overall sentiment label + color
+  var overallLabel = 'Neutral';
+  var overallColor = 'text-slate-400';
+  // If display verdict is confident (>80%) use it for sentiment coloring
+  var confPct = parseFloat(r.confidence) || 0;
+  if (displayPred === 'REAL' && confPct > 80) { overallLabel = 'Positive'; overallColor = 'text-emerald-400'; }
+  else if (displayPred === 'FAKE' && confPct > 80) { overallLabel = 'Negative'; overallColor = 'text-red-400'; }
+  else { overallLabel = 'Neutral'; overallColor = 'text-slate-400'; }
 
   // ── XAI Reasons HTML ──
   var reasonsHtml='';
@@ -744,8 +789,9 @@ function showResult(container, r, mode){
     '<div class="flex items-center justify-between gap-3 mb-5 flex-wrap">'+
       '<div class="flex items-center gap-2 flex-wrap">'+
         '<span class="'+(isReal?'badge-real':'badge-fake')+' text-base px-4 py-1.5">'+
-          '<i class="fas '+(isReal?'fa-circle-check':'fa-circle-xmark')+' mr-1.5"></i>'+r.prediction+
-        '</span>'+
+          '<i class="fas '+(isReal?'fa-circle-check':'fa-circle-xmark')+' mr-1.5"></i>'+displayPred+
+      '</span>'+ (rawPred !== displayPred ? '<span class="cred-moderate text-xs px-3 py-1 rounded-full">Misleading</span>' : '') +
+
         '<span class="text-xs bg-dark-800/50 px-2.5 py-1 rounded-full border border-dark-700/30 text-dark-300">'+esc(r.category||'General')+'</span>'+
         '<span class="text-xs bg-dark-800/50 px-2.5 py-1 rounded-full border border-dark-700/30 text-dark-400">'+esc(r.method||'AI')+'</span>'+
         '<span class="text-xs bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 text-emerald-400">'+
@@ -760,7 +806,8 @@ function showResult(container, r, mode){
 
     // Main verdict box
     '<div class="rounded-xl p-4 mb-5 border" style="background:rgba('+(isReal?'34,197,94':'239,68,68')+',.06);border-color:rgba('+(isReal?'34,197,94':'239,68,68')+',.2)">'+
-      '<p class="text-white text-lg font-bold mb-1">'+(isReal?'✓ REAL NEWS':'✗ FAKE NEWS')+'</p>'+
+      '<p class="text-white text-lg font-bold mb-1">'+(isReal?'✓ REAL NEWS':'✗ FAKE NEWS')+'</p>'+ (rawPred !== displayPred ? '<p class="text-yellow-300 text-sm">Note: AI raw verdict was '+rawPred+'. Trusted news context adjusted the final verdict.</p>' : '') +
+
       '<p class="text-dark-300 text-sm">'+(isReal?'Supported by trusted sources and AI verification.':'Conflicts with fact-check data or contains misinformation signals.')+'</p>'+
     '</div>'+
 
@@ -788,16 +835,25 @@ function showResult(container, r, mode){
           '<div><p class="text-dark-500 text-xs">Time</p><p class="text-white text-sm font-semibold">'+(r.processing_time||0)+'s</p></div>'+
         '</div>'+
       '</div>'+
-      // Sentiment chart
+      // Sentiment summary (progress bars)
       '<div class="glass rounded-xl p-4 border border-dark-700/30">'+
         '<p class="text-dark-500 text-xs font-semibold uppercase tracking-wider mb-3">Sentiment Analysis</p>'+
-        '<canvas id="'+chartId+'" height="130"></canvas>'+
-        '<div class="grid grid-cols-3 gap-1 mt-3 text-center">'+
-          '<div><p class="text-emerald-400 text-xs font-bold">'+posP+'%</p><p class="text-dark-600 text-xs">Positive</p></div>'+
-          '<div><p class="text-slate-400 text-xs font-bold">'+neuP+'%</p><p class="text-dark-600 text-xs">Neutral</p></div>'+
-          '<div><p class="text-red-400 text-xs font-bold">'+negP+'%</p><p class="text-dark-600 text-xs">Negative</p></div>'+
+        '<div class="flex items-center gap-4 mb-3">'+
+          '<div class="w-20 h-20 bg-dark-800/50 rounded-lg flex flex-col items-center justify-center">'+
+            '<span class="text-lg font-extrabold '+overallColor+'">'+overallLabel+'</span>'+
+            '<span class="text-xs text-dark-400">Overall</span>'+
+          '</div>'+
+          '<div class="flex-1">'+
+            '<div class="text-xs text-dark-400 mb-1 flex justify-between"><span>Positive</span><span class="text-white font-semibold">'+posP+'%</span></div>'+
+            '<div class="w-full bg-dark-700/40 h-2 rounded-full overflow-hidden mb-2"><div style="width:'+posP+'%;height:100%;background:linear-gradient(90deg,#10b981,#34d399)"></div></div>'+
+            '<div class="text-xs text-dark-400 mb-1 flex justify-between"><span>Neutral</span><span class="text-white font-semibold">'+neuP+'%</span></div>'+
+            '<div class="w-full bg-dark-700/40 h-2 rounded-full overflow-hidden mb-2"><div style="width:'+neuP+'%;height:100%;background:linear-gradient(90deg,#64748b,#94a3b8)"></div></div>'+
+            '<div class="text-xs text-dark-400 mb-1 flex justify-between"><span>Negative</span><span class="text-white font-semibold">'+negP+'%</span></div>'+
+            '<div class="w-full bg-dark-700/40 h-2 rounded-full"><div style="width:'+negP+'%;height:100%;background:linear-gradient(90deg,#fb7185,#ef4444)"></div></div>'+
+          '</div>'+
         '</div>'+
-      '</div>'+
+        '<div class="text-xs text-dark-400">Sentiment is an auxiliary signal; treat the confidence meter as the primary verdict indicator.</div>'+
+      '</div>'+ 
     '</div>'+
 
     // XAI Reasoning
@@ -828,24 +884,7 @@ function showResult(container, r, mode){
   container.innerHTML=html;
   container.scrollIntoView({behavior:'smooth',block:'start'});
 
-  // Draw sentiment doughnut chart
-  requestAnimationFrame(function(){
-    var ctx=document.getElementById(chartId);
-    if(!ctx) return;
-    if(sentimentChart) { try{ sentimentChart.destroy(); }catch(e){} }
-    sentimentChart=new Chart(ctx,{
-      type:'doughnut',
-      data:{
-        labels:['Positive','Neutral','Negative'],
-        datasets:[{data:[posP,neuP,negP],backgroundColor:['rgba(34,197,94,.7)','rgba(100,116,139,.5)','rgba(239,68,68,.7)'],borderColor:['#34d399','#64748b','#ef4444'],borderWidth:1.5,hoverOffset:5}]
-      },
-      options:{
-        responsive:true,cutout:'68%',
-        plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){ return c.label+': '+c.raw+'%'; }}}},
-        animation:{duration:1000}
-      }
-    });
-  });
+  // Summary visuals rendered inline (no sentiment chart)
 }
 
 /* ─────────────────────────────────────────────────────────
@@ -883,8 +922,9 @@ function generatePDF(){
   doc.roundedRect(10,y,190,22,3,3,'F');
   doc.setFontSize(14);
   doc.setFont('helvetica','bold');
-  doc.setTextColor(r.prediction==='REAL'?52:239, r.prediction==='REAL'?211:68, r.prediction==='REAL'?153:68);
-  doc.text((r.prediction==='REAL'?'✓ REAL NEWS':'✗ FAKE NEWS')+' — '+r.confidence+'% Confidence',15,y+8);
+  var pdfDisplay = (r.display_prediction || r.prediction) === 'REAL';
+  doc.setTextColor(pdfDisplay?52:239, pdfDisplay?211:68, pdfDisplay?153:68);
+  doc.text(((r.display_prediction || r.prediction)==='REAL'?'✓ REAL NEWS':'✗ FAKE NEWS')+' — '+r.confidence+'% Confidence',15,y+8);
   doc.setFontSize(9);
   doc.setTextColor(100,116,139);
   doc.text('Method: '+r.method+'   |   Category: '+r.category+'   |   Processing: '+r.processing_time+'s',15,y+16);

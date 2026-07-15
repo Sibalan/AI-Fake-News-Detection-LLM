@@ -52,9 +52,11 @@
           </div>
         </div>
         {% else %}
-        <a href="/login" class="btn-secondary text-sm py-2 px-4"><i class="fas fa-right-to-bracket mr-1.5"></i>Sign In</a>
-        <a href="/signup" class="btn-primary text-sm py-2 px-4"><i class="fas fa-user-plus mr-1.5"></i>Get Started</a>
-        {% endif %}
+<a href="/login" class="btn-primary text-sm py-2 px-5">
+    <i class="fas fa-sign-in-alt mr-2"></i>
+    Login
+</a>
+{% endif %}
       </div>
 
       <button onclick="toggleMobileMenu()" class="md:hidden p-2.5 rounded-xl glass hover:border-primary-500/30 transition-all" id="mobile-menu-btn">
@@ -87,8 +89,9 @@
         <a href="/logout" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-red-400 hover:bg-red-500/10"><i class="fas fa-right-from-bracket"></i> Sign Out</a>
         {% else %}
         <div class="flex space-x-2">
-          <a href="/login" class="flex-1 btn-secondary text-sm py-2.5 text-center"><i class="fas fa-right-to-bracket mr-1"></i> Sign In</a>
-          <a href="/signup" class="flex-1 btn-primary text-sm py-2.5 text-center"><i class="fas fa-user-plus mr-1"></i> Get Started</a>
+         <a href="/login" class="flex-1 btn-primary text-sm py-2.5 text-center">
+    <i class="fas fa-sign-in-alt mr-1"></i> Login
+</a>
         </div>
         {% endif %}
       </div>

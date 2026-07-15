@@ -30,29 +30,31 @@ def create_app():
         template_folder="../templates",
     )
 
-    app.config.from_object("config.Config")
+    app.config.from_object("backend.config.Config")
     app.config["SESSION_TYPE"] = "filesystem"
     app.config["SESSION_PERMANENT"] = False
 
     CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
 
-    from models import db, bcrypt, jwt
+    from backend.models import db, bcrypt, jwt
 
     db.init_app(app)
     bcrypt.init_app(app)
     jwt.init_app(app)
 
-    from routes.auth import auth_bp
-    from routes.predict import predict_bp
-    from routes.history import history_bp
-    from routes.admin import admin_bp
-    from routes.news import news_bp
+    from backend.routes.auth import auth_bp
+    from backend.routes.predict import predict_bp
+    from backend.routes.history import history_bp
+    from backend.routes.admin import admin_bp
+    from backend.routes.news import news_bp
+    from backend.routes.assistant import assistant_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(predict_bp)
     app.register_blueprint(history_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(news_bp)
+    app.register_blueprint(assistant_bp)
 
     def login_required(f):
         from functools import wraps
@@ -76,7 +78,7 @@ def create_app():
                 return redirect(url_for("login_page"))
             if not flask_session.get("is_admin"):
                 flash("Admin access required", "error")
-                return redirect(url_for("dashboard_page"))
+                return redirect(url_for("landing_page"))
             return f(*args, **kwargs)
 
         return decorated
@@ -85,6 +87,16 @@ def create_app():
 
     @app.route("/")
     def home_page():
+        # If already logged in, go to Home Page
+        if "user_id" in flask_session:
+            return redirect(url_for("landing_page"))
+
+        # Otherwise show Welcome Page
+        return render_template("welcome.html")
+
+    @app.route("/home")
+    @login_required
+    def landing_page():
         return render_template("index.html")
 
     @app.route("/about")
@@ -94,9 +106,21 @@ def create_app():
     @app.route("/contact", methods=["GET", "POST"])
     def contact_page():
         if request.method == "POST":
-            name = request.form.get("name", "")
-            email = request.form.get("email", "")
-            message = request.form.get("message", "")
+            name = (request.form.get("name", "") or "Anonymous").strip()
+            email = (request.form.get("email", "") or "unknown@example.com").strip()
+            message = (request.form.get("message", "") or "").strip()
+
+            if message:
+                from backend.models.user import ContactMessage
+
+                contact_message = ContactMessage(
+                    name=name or "Anonymous",
+                    email=email or "unknown@example.com",
+                    message=message,
+                )
+                db.session.add(contact_message)
+                db.session.commit()
+
             logger.info(
                 f"Contact form submission from {name} ({email}): {message[:50]}..."
             )
@@ -104,12 +128,12 @@ def create_app():
             return redirect(url_for("contact_page"))
         return render_template("contact.html")
 
-    from models.user import User
+    from backend.models.user import User, ContactMessage
 
     @app.route("/login", methods=["GET", "POST"])
     def login_page():
         if "user_id" in flask_session:
-            return redirect(url_for("dashboard_page"))
+            return redirect(url_for("landing_page"))
 
         if request.method == "POST":
             username = request.form.get("username", "").strip()
@@ -136,14 +160,14 @@ def create_app():
                 flask_session["jwt_token"] = token
 
                 if user.is_admin:
-                    from routes.admin import log_admin_action
+                    from backend.routes.admin import log_admin_action
                     log_admin_action(
                         user.id, f"Admin login: {user.username}",
                         details="Session started", ip=request.remote_addr, module="Auth"
                     )
 
                 flash("Welcome back!", "success")
-                return redirect(url_for("dashboard_page"))
+                return redirect(url_for("landing_page"))
             else:
                 flash("Invalid credentials", "error")
                 return render_template("login.html", form_data=request.form)
@@ -153,7 +177,7 @@ def create_app():
     @app.route("/signup", methods=["GET", "POST"])
     def signup_page():
         if "user_id" in flask_session:
-            return redirect(url_for("dashboard_page"))
+            return redirect(url_for("landing_page"))
 
         if request.method == "POST":
             username = request.form.get("username", "").strip()
@@ -184,31 +208,20 @@ def create_app():
 
             user = User(username=username, email=email, full_name=full_name or username)
             user.set_password(password)
-            from models import db
+            from backend.models import db
 
             db.session.add(user)
             db.session.commit()
 
-            from flask_jwt_extended import create_access_token
-
-            token = create_access_token(identity=str(user.id))
-
-            flask_session["user_id"] = user.id
-            flask_session["username"] = user.username
-            flask_session["email"] = user.email
-            flask_session["full_name"] = user.full_name or user.username
-            flask_session["is_admin"] = user.is_admin
-            flask_session["jwt_token"] = token
-
-            flash("Account created successfully!", "success")
-            return redirect(url_for("dashboard_page"))
+            flash("Account created successfully! Please sign in.", "success")
+            return redirect(url_for("login_page"))
 
         return render_template("signup.html")
 
     @app.route("/logout")
     def logout():
         if flask_session.get("is_admin") and flask_session.get("user_id"):
-            from routes.admin import log_admin_action
+            from backend.routes.admin import log_admin_action
             log_admin_action(
                 flask_session["user_id"], f"Admin logout: {flask_session.get('username', '')}",
                 details="Session ended", ip=request.remote_addr, module="Auth"
@@ -264,24 +277,26 @@ def create_app():
                 return render_template("change_password.html")
 
             user.set_password(new_pass)
-            from models import db
+            from backend.models import db
 
             db.session.commit()
             flash("Password changed successfully", "success")
-            return redirect(url_for("dashboard_page"))
+            return redirect(url_for("landing_page"))
 
         return render_template("change_password.html")
 
     @app.route("/admin")
-    @admin_required
+    # @admin_required
     def admin_page():
-        return redirect("/admin-panel")
+        return redirect("admin_portal.html")
 
     @app.route("/admin-panel")
     @app.route("/admin-pannel")
-    @login_required
+    @app.route("/admin_panel")
+    @app.route("/admin_portal")
+    # @admin_required
     def admin_panel_page():
-        return render_template("admin_panel.html")
+        return render_template("admin_portal.html")
 
     @app.route("/admin-login", methods=["GET", "POST"])
     def admin_login_page():
@@ -315,7 +330,7 @@ def create_app():
                 flask_session["is_admin"] = True
                 flask_session["jwt_token"] = token
 
-                from routes.admin import log_admin_action
+                from backend.routes.admin import log_admin_action
                 log_admin_action(
                     user.id, f"Admin login: {user.username}",
                     details="Admin panel access via admin login page",
@@ -337,7 +352,7 @@ def create_app():
 
     @app.route("/api/health", methods=["GET"])
     def health_check():
-        from ollama_client import check_ollama_status
+        from backend.ollama_client import check_ollama_status
 
         ollama_status = check_ollama_status()
         return jsonify(
@@ -352,13 +367,13 @@ def create_app():
 
     @app.route("/api/ollama/status", methods=["GET"])
     def ollama_status():
-        from ollama_client import check_ollama_status
+        from backend.ollama_client import check_ollama_status
 
         return jsonify(check_ollama_status())
 
     @app.route("/api/predict/test", methods=["GET", "POST"])
     def predict_test():
-        from ollama_client import analyze_with_phi3
+        from backend.ollama_client import analyze_with_phi3
 
         text = "Scientists discover a new species of frog in the Amazon rainforest."
         if request.method == "POST":
@@ -445,7 +460,7 @@ def create_app():
                     username="demo",
                     email="demo@rvce.edu.in",
                     full_name="Demo User",
-                    is_admin=False,
+                    is_admin=True,
                     is_active=True,
                 )
                 demo.set_password("demo123")
@@ -454,6 +469,13 @@ def create_app():
                 logger.info("Demo user created: demo / demo123")
         except Exception as e:
             logger.error(f"Database init error: {e}")
+
+        try:
+            from backend.news_ingest import start_news_ingestion_scheduler
+
+            start_news_ingestion_scheduler(app)
+        except Exception as exc:
+            logger.warning(f"Could not start news ingestion scheduler: {exc}")
 
     return app
 
